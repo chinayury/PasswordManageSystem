@@ -152,30 +152,14 @@ python -m app        # 模块入口（等价 wsgi.py 的 waitress 模式）
   前 5 位，k-匿名协议）
 - `./data/.secrets.env`（Docker 部署的密钥文件）必须单独备份
 
-## 许可证
-
-### 许可与信息
-
-| 项目 | 内容 |
-| --- | --- |
-| 开发者 | 智维ITMSKY |
-| 版权 | Copyright (C) 2026 智维ITMSKY |
-| 官网 | [http://www.itmsky.com](http://www.itmsky.com) |
-| 许可证 | GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later，见 [LICENSE](LICENSE)） |
-
+## 许可与信息
+开发者：智维ITMSKY
+版权：Copyright (C) 2026 智维ITMSKY
+官网：http://www.itmsky.com
+许可证：GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later，见 LICENSE）
 SPDX-License-Identifier: AGPL-3.0-or-later
 
 > 本程序是自由软件：你可以遵照 GNU Affero 通用公共许可证第3版或后续版本的规定，重新分发和/或修改它。
->
 > 本程序旨在广泛共享，但不提供任何担保；甚至不包含适销性和特定用途适用性的默示保证。详情请参阅 GNU Affero General Public License。
->
 > 如果你修改本程序并通过网络向公众提供服务（SaaS、Web、API等在线服务），你必须向该服务的使用者提供对应修改后的完整源代码。
->
 > 你应当随本程序一同收到 GNU Affero General Public License 的副本；如未收到，详见 <https://www.gnu.org/licenses/>。
-
-本项目采用 **GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later）**，
-完整条款见 [LICENSE](LICENSE)，或参见
-[GNU AGPL v3 官方页面](https://www.gnu.org/licenses/agpl-3.0.html)。
-
-作为网络服务向他人提供时，AGPL 要求向使用者提供对应源码；修改后分发或对外提供
-服务，须同样以 AGPL-3.0 开放源代码。
