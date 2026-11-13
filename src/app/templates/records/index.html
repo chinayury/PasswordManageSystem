@@ -1,0 +1,170 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}密码资产 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   工具条按「主操作 / 次操作 / 导出」分三级：新增为主色实心，
+   导入为描边次按钮，导出为幽灵按钮——视觉权重与操作频率对齐。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">ASSET LEDGER · 资产台账</span>
+        <h1 class="page-title">{{ icon('table') }}密码资产</h1>
+        <p class="page-sub">全部设备账号的加密总账：口令按需解密、操作全程留痕、到期一目了然</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.add') }}" class="btn btn-primary">{{ icon('plus') }}新增记录</a>
+        <a href="{{ url_for('records.import_data') }}" class="btn btn-secondary">{{ icon('upload') }}批量导入</a>
+        <a href="{{ url_for('records.export_data', fmt='xlsx') }}" class="btn btn-ghost">{{ icon('export') }}导出 Excel</a>
+        <a href="{{ url_for('records.export_data', fmt='csv') }}" class="btn btn-ghost">{{ icon('export') }}导出 CSV</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card card--plain">
+    {# ---- 检索区：淡钴底条带，字段/关键词/快捷筛选同排 ---- #}
+    <form method="get" action="{{ url_for('records.index') }}" class="search-filter">
+        <div class="form-group">
+            <label for="filter_project">所属项目</label>
+            <select name="filter_project" id="filter_project">
+                <option value="">所有项目</option>
+                {% for p in all_projects %}
+                    <option value="{{ p.id }}" {% if filter_project == p.id %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="filter_field">检索字段</label>
+            <select name="filter_field" id="filter_field">
+                <option value="device_model" {% if filter_field == 'device_model' %}selected{% endif %}>设备型号</option>
+                <option value="serial_number" {% if filter_field == 'serial_number' %}selected{% endif %}>序列号</option>
+                <option value="location" {% if filter_field == 'location' %}selected{% endif %}>位置</option>
+                <option value="node_name" {% if filter_field == 'node_name' %}selected{% endif %}>节点名</option>
+                <option value="ip_address" {% if filter_field == 'ip_address' %}selected{% endif %}>IP地址</option>
+                <option value="username" {% if filter_field == 'username' %}selected{% endif %}>用户名</option>
+            </select>
+        </div>
+        <div class="form-group grow">
+            <label for="search">关键词</label>
+            <input type="search" id="search" name="search" maxlength="100"
+                   placeholder="搜索型号 / IP / 用户名…" value="{{ search_query }}">
+        </div>
+        <div class="form-group actions-cell">
+            {# v0.1.0 第六轮 FU-05：空 label 占位改为 aria-hidden，
+                不再向读屏软件暴露无意义标签 #}
+            <span class="form-spacer" aria-hidden="true"></span>
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary">{{ icon('search') }}检索</button>
+                <label class="filter-chip {% if filter_expiring %}is-on{% endif %}"
+                       title="已过期或 30 天内到期的记录">
+                    <input type="checkbox" name="filter_expiring" value="1"
+                           {% if filter_expiring %}checked{% endif %}>
+                    {{ icon('clock') }}到期关注
+                </label>
+                {% if search_query or filter_project or filter_expiring %}
+                    <a href="{{ url_for('records.index') }}" class="btn btn-ghost btn-sm">重置</a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if records %}
+    <p class="result-count">
+        {{ icon('info') }}共 <strong>{{ total }}</strong> 条记录（当前第 {{ page }}/{{ pages }} 页）
+        {% if filter_expiring %}<span class="badge badge-warning">到期关注筛选中</span>{% endif %}
+    </p>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>所属项目</th>
+                    <th>设备型号</th>
+                    <th>序列号</th>
+                    <th>位置</th>
+                    <th>节点名</th>
+                    <th>IP</th>
+                    <th>用户名</th>
+                    <th>密码</th>
+                    <th>端口</th>
+                    <th>访问方式</th>
+                    <th>备注</th>
+                    <th>附件</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr data-id="{{ record.id }}">
+                    <td class="num">{{ record.id }}</td>
+                    <td>
+                        {% if record.project_name %}
+                            {% if record.project_type == '集成项目' %}{% set badge_class = 'badge-integration' %}
+                            {% elif record.project_type == '运维项目' %}{% set badge_class = 'badge-ops' %}
+                            {% elif record.project_type == '日常办公' %}{% set badge_class = 'badge-office' %}
+                            {% else %}{% set badge_class = 'badge-other' %}{% endif %}
+                            <span class="badge {{ badge_class }}" title="{{ record.project_name }}">{{ record.project_name }}</span>
+                        {% else %}<span class="muted">-</span>{% endif %}
+                    </td>
+                    <td class="nowrap"><strong>{{ record.device_model }}</strong></td>
+                    <td class="nowrap">{{ record.serial_number or '-' }}</td>
+                    <td>{{ record.location or '-' }}</td>
+                    <td class="nowrap">{{ record.node_name or '-' }}</td>
+                    <td class="mono nowrap">{{ record.ip_address or '-' }}</td>
+                    <td class="nowrap">{{ record.username or '-' }}</td>
+                    <td>
+                        {% if record.has_password %}
+                            <span class="pw-cell">
+                                <code class="pw-mask" data-record="{{ record.id }}">••••••••</code>
+                                <button class="btn btn-sm btn-info btn-reveal" data-record="{{ record.id }}" type="button" aria-label="查看密码">{{ icon('eye') }}查看</button>
+                                <button class="btn btn-sm btn-secondary btn-copy" data-record="{{ record.id }}" type="button" aria-label="复制密码">{{ icon('copy') }}复制</button>
+                            </span>
+                        {% else %}<span class="muted">未设置</span>{% endif %}
+                    </td>
+                    <td class="num">{{ record.port or '-' }}</td>
+                    <td class="nowrap">{{ record.access_method or '-' }}</td>
+                    <td>
+                        {% if record.remark1 and record.remark1.startswith('data:image/') %}
+                            <img src="{{ record.remark1 }}" class="remark-image" alt="备注图片">
+                        {% elif record.remark1 %}
+                            {{ record.remark1[:30] }}{% if record.remark1|length > 30 %}…{% endif %}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td class="nowrap">
+                        {% if record.file1_path %}
+                            <a href="{{ url_for('records.download_attachment', record_id=record.id, which=1) }}" title="下载附件1" class="att-link">{{ icon('paperclip') }}1</a>
+                        {% endif %}
+                        {% if record.file2_path %}
+                            <a href="{{ url_for('records.download_attachment', record_id=record.id, which=2) }}" title="下载附件2" class="att-link">{{ icon('paperclip') }}2</a>
+                        {% endif %}
+                        {% if not record.file1_path and not record.file2_path %}<span class="muted">-</span>{% endif %}
+                    </td>
+                    <td class="cell-actions">
+                        <a href="{{ url_for('records.edit', record_id=record.id) }}" class="btn btn-sm btn-primary">{{ icon('edit') }}编辑</a>
+                        <a href="{{ url_for('shares.share_record', record_id=record.id) }}" class="btn btn-sm btn-info">{{ icon('share') }}共享</a>
+                        <form action="{{ url_for('records.delete', record_id=record.id) }}" method="post" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="确定要删除这条记录吗？删除后将进入回收站，30天内可恢复。">{{ icon('trash') }}删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include "partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        {{ icon('vault') }}
+        <h3>保险库还是空的</h3>
+        <p>点击右上角「新增记录」录入第一条设备账号，或通过「批量导入」载入存量表格。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/records.js') }}"></script>
+{% endblock %}

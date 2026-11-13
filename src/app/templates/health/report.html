@@ -1,0 +1,198 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}体检报告 #{{ run.id }} - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题；导出为主操作（次按钮），返回为幽灵按钮。
+   副标题直接把本轮范围与时间讲清楚，省去读者再翻表格。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">HEALTH REPORT · 体检报告</span>
+        <h1 class="page-title">{{ icon('gauge') }}密码健康报告 #{{ run.id }}</h1>
+        <p class="page-sub">
+            {{ '全库' if run.scope_type == 'all' else '本人记录' }} · {{ run.started_at|localtime }}
+            {% if run.status == 'partial' %}（部分完成）{% elif run.status == 'failed' %}（失败）{% endif %}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('health.export', run_id=run.id) }}" class="btn btn-secondary">{{ icon('export') }}导出 Excel（不含密码列）</a>
+        <a href="{{ url_for('health.index') }}" class="btn btn-ghost">{{ icon('back') }}返回体检中心</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    {% if run.error %}
+    <div class="notice notice-warning" role="alert">
+        {{ icon('alert') }}
+        <span>本轮审计部分结果可用：{{ run.error }}</span>
+    </div>
+    {% endif %}
+    {% if run.hibp_enabled and run.hibp_available == 0 %}
+    <div class="notice notice-warning" role="alert">
+        {{ icon('alert') }}
+        <span>HIBP 泄露查询暂不可用（网络失败已降级），本轮泄露结果可能不完整，其余类别不受影响。</span>
+    </div>
+    {% endif %}
+
+    {# ---------- 评分头：conic-gradient 进度环 + 评级 + 告警清单 ---------- #}
+    <div class="score-hero">
+        {# --pct 为进度环填充百分比（0-100）：全站唯一被允许的内联样式，
+           用途是向 CSS 变量注入数值以驱动 conic-gradient 进度环；
+           render_smoke.py 的静态检查已对该写法按白名单放行。 #}
+        <div class="score-ring" style="--pct: {{ run.posture_score if run.posture_score is not none else 0 }}">
+            <b>{{ run.posture_score if run.posture_score is not none else '-' }}</b>
+            <small>/100</small>
+        </div>
+        <div class="score-meta">
+            <span class="score-grade">综合评级 · {{ grade(run.posture_score) if run.posture_score is not none else '-' }}</span>
+            <span class="score-desc">评分与状态为只读派生量，密码值永不回显。点击行内「去修改」可跳转对应记录编辑页。</span>
+            {% if alerts %}
+            {# v0.1.0 第六轮 FU-07：旧写法 <div><dd> 脱离 <dl>，
+               不是合法的描述列表结构；改为 dl > div > dd #}
+            <dl class="info-list">
+                {% for alert in alerts %}
+                <div><dd>{{ alert }}</dd></div>
+                {% endfor %}
+            </dl>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ---------- 分类统计与阈值 ---------- #}
+    <div class="card-body">
+        <div class="settings-grid">
+            <div class="settings-box">
+                <h3>{{ icon('chart') }}分类统计</h3>
+                <div class="info-list">
+                    <div>
+                        <dt>分析条目</dt>
+                        <dd>{{ run.item_total }} 条</dd>
+                    </div>
+                    <div>
+                        <dt>弱口令</dt>
+                        <dd>{{ run.weak_count }} 条</dd>
+                    </div>
+                    <div>
+                        <dt>重复口令</dt>
+                        <dd>{{ run.reused_count }} 条</dd>
+                    </div>
+                    <div>
+                        <dt>年龄/到期</dt>
+                        <dd>{{ run.old_count }} 条</dd>
+                    </div>
+                    {% if run.hibp_enabled %}
+                    <div>
+                        <dt>泄露(HIBP)</dt>
+                        <dd>{{ run.hibp_count }} 条</dd>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="settings-box">
+                <h3>{{ icon('target') }}本轮阈值快照</h3>
+                <div class="info-list">
+                    <div>
+                        <dt>弱口令分界</dt>
+                        <dd>评分 &lt; {{ thresholds.get('weak_threshold', 75) }}（&lt;Good）</dd>
+                    </div>
+                    <div>
+                        <dt>口令最长使用</dt>
+                        <dd>{{ thresholds.get('max_age_days', 365) }} 天</dd>
+                    </div>
+                    <div>
+                        <dt>到期预警</dt>
+                        <dd>{{ thresholds.get('expire_warn_days', 30) }} 天内</dd>
+                    </div>
+                    <div>
+                        <dt>复用惩罚</dt>
+                        <dd>每多复用一次 -{{ thresholds.get('reuse_penalty', 15) }}，封顶 {{ thresholds.get('reuse_score_cap', 74) }}</dd>
+                    </div>
+                    <div>
+                        <dt>HIBP</dt>
+                        <dd>{% if run.hibp_enabled %}已启用（k-匿名，仅发送 SHA-1 前 5 位）{% else %}未启用{% endif %}</dd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---------- 四类页签：底部钴蓝指示条由 CSS 提供 ---------- #}
+    <div class="report-tabs">
+        <a href="{{ url_for('health.report', run_id=run.id, tab='weak') }}"
+           class="report-tab {{ 'active' if tab == 'weak' }}">{{ icon('alert') }}弱口令<span class="count">{{ run.weak_count }}</span></a>
+        <a href="{{ url_for('health.report', run_id=run.id, tab='reused') }}"
+           class="report-tab {{ 'active' if tab == 'reused' }}">{{ icon('layers') }}重复口令<span class="count">{{ run.reused_count }}</span></a>
+        <a href="{{ url_for('health.report', run_id=run.id, tab='old') }}"
+           class="report-tab {{ 'active' if tab == 'old' }}">{{ icon('clock') }}年龄/到期<span class="count">{{ run.old_count }}</span></a>
+        {% if run.hibp_enabled %}
+        <a href="{{ url_for('health.report', run_id=run.id, tab='hibp') }}"
+           class="report-tab {{ 'active' if tab == 'hibp' }}">{{ icon('scan') }}泄露查询<span class="count">{{ run.hibp_count }}</span></a>
+        {% endif %}
+    </div>
+
+    {% if findings %}
+    <p class="result-count">
+        {{ icon('info') }}共 <strong>{{ total_in_tab }}</strong> 条{% if total_in_tab > display_limit %}，页面仅显示最差的前 {{ display_limit }} 条（完整清单请导出 Excel）{% endif %}
+    </p>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>严重度</th>
+                    <th>标题</th>
+                    <th>分组</th>
+                    <th>评分</th>
+                    <th>原因</th>
+                    <th>明细</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in findings %}
+                {% set sev = f.severity %}
+                {% set sev_class = 'sev-high' if sev >= 3 else ('sev-medium' if sev == 2 else 'sev-low') %}
+                {% set sev_text = '必须修改' if sev >= 3 else ('应尽快修改' if sev == 2 else '建议修改') %}
+                <tr>
+                    <td>
+                        <span class="sev-badge {{ sev_class }}" title="{{ sev_text }}（严重度 {{ sev }}）">
+                            {% if sev >= 3 %}●{% elif sev == 2 %}▲{% else %}△{% endif %} {{ sev_text }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ f.device_model }}</strong>
+                        {% if f.deleted_at %}<span class="badge badge-other">已删除</span>{% endif %}
+                        {% if f.details and f.details.expired %}<span class="badge badge-ops">已过期</span>{% endif %}
+                    </td>
+                    <td>{{ f.project_name or '未分组' }}</td>
+                    <td><strong>{{ f.score|round|int }}</strong> <span class="muted">({{ grade(f.score) }})</span></td>
+                    <td>{{ (f.details.reasons | join('；')) if f.details and f.details.reasons else '-' }}</td>
+                    <td>
+                        {% set d = f.details or {} %}
+                        {% set meta = [] %}
+                        {% if d.reuse_count %}{% set _ = meta.append('复用 ' ~ d.reuse_count ~ ' 条' ~ ('：' ~ d.reuse_peers|join('、') if d.reuse_peers else '')) %}{% endif %}
+                        {% if d.hibp_bucket %}{% set _ = meta.append('泄露 ' ~ d.hibp_count ~ ' 次（' ~ d.hibp_bucket ~ '）') %}{% endif %}
+                        {% if d.age_days is not none %}{% set _ = meta.append('已使用 ' ~ d.age_days ~ ' 天' ~ ('（估算）' if d.age_estimated else '')) %}{% endif %}
+                        {% if d.expired %}{% set _ = meta.append('已到期') %}
+                        {% elif d.expire_in_days is defined and d.expire_in_days is not none %}{% set _ = meta.append(d.expire_in_days ~ ' 天后到期') %}{% endif %}
+                        {{ meta|join('；') if meta else '-' }}
+                    </td>
+                    <td class="cell-actions">
+                        <a href="{{ url_for('records.edit', record_id=f.item_id) }}" class="btn btn-sm btn-primary">{{ icon('edit') }}去修改</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        {{ icon('check-circle') }}
+        <h3>该类别暂无发现</h3>
+        <p>本轮体检未发现此类别的问题。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

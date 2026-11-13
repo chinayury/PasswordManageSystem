@@ -1,0 +1,67 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}回收站 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   删除态页面：用 .card--accent（左侧珊瑚竖条）与资产台账区分。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">RECYCLE BIN · 回收站</span>
+        <h1 class="page-title">{{ icon('trash') }}回收站</h1>
+        <p class="page-sub">共 {{ total }} 条 · 删除的记录保留 30 天，可随时恢复或彻底删除</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card card--accent">
+    {% if records %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>设备型号</th>
+                    <th>IP</th>
+                    <th>用户名</th>
+                    <th>删除时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td class="num">{{ record.id }}</td>
+                    <td class="nowrap"><strong>{{ record.device_model }}</strong></td>
+                    <td class="mono nowrap">{{ record.ip_address or '-' }}</td>
+                    <td class="nowrap">{{ record.username or '-' }}</td>
+                    <td class="nowrap">{{ record.deleted_at|localtime }}</td>
+                    <td class="cell-actions">
+                        <form action="{{ url_for('records.restore_record', record_id=record.id) }}" method="post" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-success">{{ icon('undo') }}恢复</button>
+                        </form>
+                        <form action="{{ url_for('records.purge_record', record_id=record.id) }}" method="post" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="彻底删除后无法恢复，确定继续？">{{ icon('trash') }}彻底删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        {{ icon('trash') }}
+        <h3>回收站为空</h3>
+        <p>删除的密码记录会进入回收站，30 天内可恢复或彻底删除。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

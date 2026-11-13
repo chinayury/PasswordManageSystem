@@ -1,0 +1,199 @@
+{# ============================================================
+   图标库 v0.1.0（第二轮）— 「Cobalt Bay 钴湾」双色调图标集
+   ------------------------------------------------------------
+   v0.1.0 第二轮全面视觉重构：全部重绘，与上一版「Teal Ledger」
+   纯描边图标在笔画、端头、构形上均不同。
+
+   新规范（duotone 双色调）：
+   · 24×24 viewBox，stroke 1.7（上一版 1.6），round 圆角端头
+   · 每枚图标含**一枚以 currentColor 16% 不透明度填充的实心形状**
+     （stroke="none"），与线性描边部分叠加形成双色调层次——
+     这是与上一版"纯描边"最直观的区分点
+   · currentColor 继承，aria-hidden 纯装饰
+   · 构形偏向「几何块面 + 细描边」，比上一版更紧实、字重更足
+
+   用法：{% from "partials/icons.html" import icon %} {{ icon('key') }}
+   可用名（与上一版完全兼容，50 枚）：
+   vault shield key grid folder share inbox trash log plug lock gauge
+   pulse users user settings database plus upload download edit search
+   eye eye-off copy alert check-circle x-circle clock mail logout back
+   refresh link paperclip chev-r chev-l send filter info
+   table chart server clock-alert export import restore undo
+   fingerprint scan activity layers target zap bell-off shield-check
+   ============================================================ #}
+{% macro icon(name, cls='ic') -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if name == 'vault' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="3" y="4" width="18" height="16" rx="3"/></g>
+<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9.5h18"/><circle cx="12" cy="14.8" r="2.9"/><path d="M12 11.9v-.9M14.2 14.8h.9M12 17.7v.4M9.9 14.8H9"/>
+{%- elif name == 'shield' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 3.2l7.6 3.1v5.5c0 4.6-3.1 8.6-7.6 9.9-4.5-1.3-7.6-5.3-7.6-9.9V6.3z"/></g>
+<path d="M12 3.2l7.6 3.1v5.5c0 4.6-3.1 8.6-7.6 9.9-4.5-1.3-7.6-5.3-7.6-9.9V6.3z"/><path d="M9 12.1l2.2 2.2 4-4.2"/>
+{%- elif name == 'key' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="8" cy="16" r="4.2"/></g>
+<circle cx="8" cy="16" r="4.2"/><circle cx="8" cy="16" r="1.4"/><path d="M11 13L20.2 3.8"/><path d="M16.4 7.6l2.4 2.4M13.9 10.1l1.7 1.7"/>
+{%- elif name == 'grid' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="2"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2"/></g>
+<rect x="3.5" y="3.5" width="7.2" height="7.2" rx="2"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2"/>
+{%- elif name == 'folder' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M3.5 7.6A2.6 2.6 0 016.1 5h3.9l2.1 2.5h6.8a2.6 2.6 0 012.6 2.6v6.3a2.6 2.6 0 01-2.6 2.6H6.1a2.6 2.6 0 01-2.6-2.6z"/></g>
+<path d="M3.5 7.6A2.6 2.6 0 016.1 5h3.9l2.1 2.5h6.8a2.6 2.6 0 012.6 2.6v6.3a2.6 2.6 0 01-2.6 2.6H6.1a2.6 2.6 0 01-2.6-2.6z"/><path d="M3.5 10.4h17"/>
+{%- elif name == 'share' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="17.8" cy="5.8" r="2.7"/><circle cx="17.8" cy="18.2" r="2.7"/></g>
+<circle cx="6.2" cy="12" r="2.7"/><circle cx="17.8" cy="5.8" r="2.7"/><circle cx="17.8" cy="18.2" r="2.7"/><path d="M8.7 10.7l6.6-3.7M8.7 13.3l6.6 3.7"/>
+{%- elif name == 'inbox' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M4 13.4V18a2 2 0 002 2h12a2 2 0 002-2v-4.6z"/></g>
+<path d="M4 13.4l1.9-7.2A2 2 0 017.8 4.8h8.4a2 2 0 011.9 1.4l1.9 7.2"/><path d="M4 13.4V18a2 2 0 002 2h12a2 2 0 002-2v-4.6"/><path d="M4 13.4h4.4a3.6 3.6 0 007.2 0H20"/>
+{%- elif name == 'trash' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M6.6 7l.8 11.5A1.8 1.8 0 009.2 20h5.6a1.8 1.8 0 001.8-1.5L17.4 7z"/></g>
+<path d="M4.6 7h14.8"/><path d="M9.6 7V5.3A1.3 1.3 0 0110.9 4h2.2a1.3 1.3 0 011.3 1.3V7"/><path d="M6.6 7l.8 11.5A1.8 1.8 0 009.2 20h5.6a1.8 1.8 0 001.8-1.5L17.4 7"/><path d="M10.4 10.6v6M13.6 10.6v6"/>
+{%- elif name == 'log' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="5" y="3.6" width="14" height="16.8" rx="2.6"/></g>
+<rect x="5" y="3.6" width="14" height="16.8" rx="2.6"/><path d="M8.6 8.4h6.8M8.6 12h6.8M8.6 15.6h4"/>
+{%- elif name == 'plug' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M6.4 8h11.2v3.3a5.6 5.6 0 01-11.2 0z"/></g>
+<path d="M9 3.4V8M15 3.4V8"/><path d="M6.4 8h11.2v3.3a5.6 5.6 0 01-11.2 0z"/><path d="M12 16.9v3.7"/>
+{%- elif name == 'lock' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="4.8" y="10.4" width="14.4" height="9.8" rx="2.8"/></g>
+<rect x="4.8" y="10.4" width="14.4" height="9.8" rx="2.8"/><path d="M8.1 10.4V7.9a3.9 3.9 0 017.8 0v2.5"/><circle cx="12" cy="15.3" r="1.6"/>
+{%- elif name == 'gauge' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M4.2 15.4a7.8 7.8 0 1115.6 0z"/></g>
+<path d="M4.2 15.4a7.8 7.8 0 1115.6 0"/><path d="M12 15.4l3.7-5"/><circle cx="12" cy="15.4" r="1.3"/><path d="M4.2 19.4h15.6"/>
+{%- elif name == 'pulse' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="18.5" cy="12.4" r="1.6"/></g>
+<path d="M3.4 12.4h3.9l2.1-5 3.6 9.6 2.1-4.6h5.5"/><circle cx="18.5" cy="12.4" r="1.6"/>
+{%- elif name == 'users' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="9.2" cy="8.4" r="3.4"/><path d="M15.6 5.5a3.4 3.4 0 010 5.8"/></g>
+<circle cx="9.2" cy="8.4" r="3.4"/><path d="M3.6 19.6a5.8 5.8 0 0111.2 0"/><path d="M15.6 5.5a3.4 3.4 0 010 5.8M17.6 14.2a5.8 5.8 0 013 5.2"/>
+{%- elif name == 'user' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="8" r="3.6"/></g>
+<circle cx="12" cy="8" r="3.6"/><path d="M5.2 19.8a6.8 6.8 0 0113.6 0"/>
+{%- elif name == 'settings' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="2.9"/></g>
+<circle cx="12" cy="12" r="2.9"/><path d="M12 3.6v2.5M12 17.9v2.5M4.4 7.8l2.2 1.3M17.4 14.9l2.2 1.3M4.4 16.2l2.2-1.3M17.4 9.1l2.2-1.3"/>
+{%- elif name == 'database' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><ellipse cx="12" cy="5.9" rx="7.2" ry="2.9"/></g>
+<ellipse cx="12" cy="5.9" rx="7.2" ry="2.9"/><path d="M4.8 5.9v12.2c0 1.6 3.2 2.9 7.2 2.9s7.2-1.3 7.2-2.9V5.9"/><path d="M4.8 12c0 1.6 3.2 2.9 7.2 2.9s7.2-1.3 7.2-2.9"/>
+{%- elif name == 'plus' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 5.6v12.8M5.6 12h12.8"/></g>
+<path d="M12 5v14M5 12h14"/>
+{%- elif name == 'upload' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M7.4 9.2L12 4.6l4.6 4.6z"/></g>
+<path d="M12 16.2V4.6"/><path d="M7.4 9.2L12 4.6l4.6 4.6"/><path d="M4.4 19.6h15.2"/>
+{%- elif name == 'download' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M7.4 11L12 15.6l4.6-4.6z"/></g>
+<path d="M12 4v11.6"/><path d="M7.4 11L12 15.6l4.6-4.6"/><path d="M4.4 19.6h15.2"/>
+{%- elif name == 'edit' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M14.4 5.4l4.2 4.2L8.2 20H4v-4.2z"/></g>
+<path d="M14.4 5.4l4.2 4.2L8.2 20H4v-4.2z"/><path d="M12.6 7.2l4.2 4.2"/>
+{%- elif name == 'search' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="10.8" cy="10.8" r="6"/></g>
+<circle cx="10.8" cy="10.8" r="6"/><path d="M15.3 15.3L20.2 20.2"/>
+{%- elif name == 'eye' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M2.4 12S6 5.7 12 5.7 21.6 12 21.6 12 18 18.3 12 18.3 2.4 12 2.4 12z"/></g>
+<path d="M2.4 12S6 5.7 12 5.7 21.6 12 21.6 12 18 18.3 12 18.3 2.4 12 2.4 12z"/><circle cx="12" cy="12" r="2.9"/>
+{%- elif name == 'eye-off' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M10 5.2A9.7 9.7 0 0112 5c6 0 9.6 6.3 9.6 6.3a17.6 17.6 0 01-3.2 4M14.6 18.5A9 9 0 0112 19c-6 0-9.6-6.3-9.6-6.3a17.8 17.8 0 013.8-4.4"/></g>
+<path d="M4 4l16 16"/><path d="M10 5.2A9.7 9.7 0 0112 5c6 0 9.6 6.3 9.6 6.3a17.6 17.6 0 01-3.2 4M14.6 18.5A9 9 0 0112 19c-6 0-9.6-6.3-9.6-6.3a17.8 17.8 0 013.8-4.4"/>
+{%- elif name == 'copy' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="8.8" y="8.8" width="11.4" height="11.4" rx="2.6"/></g>
+<rect x="8.8" y="8.8" width="11.4" height="11.4" rx="2.6"/><path d="M5.4 14.6h-.9A1.7 1.7 0 013 12.9V4.9A1.7 1.7 0 014.5 3.2h8a1.7 1.7 0 011.7 1.7v.9"/>
+{%- elif name == 'alert' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 3.9L2.6 19.8h18.8z"/></g>
+<path d="M12 3.9L2.6 19.8h18.8z"/><path d="M12 9.8v4.4M12 17.1v.3"/>
+{%- elif name == 'check-circle' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="8.7"/></g>
+<circle cx="12" cy="12" r="8.7"/><path d="M8.2 12.2l2.5 2.5 5-5.2"/>
+{%- elif name == 'x-circle' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="8.7"/></g>
+<circle cx="12" cy="12" r="8.7"/><path d="M9.1 9.1l5.8 5.8M14.9 9.1l-5.8 5.8"/>
+{%- elif name == 'clock' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="8.7"/></g>
+<circle cx="12" cy="12" r="8.7"/><path d="M12 7.3V12l3.1 2.3"/>
+{%- elif name == 'clock-alert' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="11" cy="13" r="8"/></g>
+<circle cx="11" cy="13" r="8"/><path d="M11 8.4V13l3 2.2"/><path d="M17.5 3.6l3.4 6.2M20.9 3.6h-6.8M20.9 9.8h-6.8"/>
+{%- elif name == 'mail' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2.6"/></g>
+<rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2.6"/><path d="M4.4 7l7.6 5.9L19.6 7"/>
+{%- elif name == 'logout' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M13 3.8H6A1.6 1.6 0 004.4 5.4v13.2A1.6 1.6 0 006 20.2h7a1.6 1.6 0 001.6-1.6v-2.4z"/></g>
+<path d="M14.6 7.8V5.4A1.6 1.6 0 0013 3.8H6A1.6 1.6 0 004.4 5.4v13.2A1.6 1.6 0 006 20.2h7a1.6 1.6 0 001.6-1.6v-2.4"/><path d="M10.4 12h9.8M17.4 8.4l3.2 3.6-3.2 3.6"/>
+{%- elif name == 'back' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M11 5.8L4.8 12l6.2 6.2z"/></g>
+<path d="M19.2 12H4.8"/><path d="M11 5.8L4.8 12l6.2 6.2"/>
+{%- elif name == 'refresh' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M20.2 12a8.2 8.2 0 00-2.7-6.1V2.4"/></g>
+<path d="M20.2 12a8.2 8.2 0 10-2.7 6.1"/><path d="M20.2 19.8v-5.6h-5.6"/><path d="M20.2 5.9V2.4h-3.5"/>
+{%- elif name == 'link' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M10.4 13.6a4.2 4.2 0 005.9 0l3.1-3.1a4.2 4.2 0 00-5.9-5.9l-1.7 1.7"/></g>
+<path d="M10.4 13.6a4.2 4.2 0 005.9 0l3.1-3.1a4.2 4.2 0 00-5.9-5.9l-1.7 1.7"/><path d="M13.6 10.4a4.2 4.2 0 00-5.9 0l-3.1 3.1a4.2 4.2 0 005.9 5.9l1.7-1.7"/>
+{%- elif name == 'paperclip' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M9.2 12.4l6-6a3.5 3.5 0 014.9 4.9l-7.9 7.9a5.2 5.2 0 01-7.4-7.4L11.6 4.7"/></g>
+<path d="M9.2 12.4l6-6a3.5 3.5 0 014.9 4.9l-7.9 7.9a5.2 5.2 0 01-7.4-7.4L11.6 4.7"/>
+{%- elif name == 'chev-r' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M9.2 5.4l6.6 6.6-6.6 6.6z"/></g>
+<path d="M9.2 5.4l6.6 6.6-6.6 6.6"/>
+{%- elif name == 'chev-l' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M14.8 5.4L8.2 12l6.6 6.6z"/></g>
+<path d="M14.8 5.4L8.2 12l6.6 6.6"/>
+{%- elif name == 'send' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M20.6 3.4L14.2 20.6l-4-6.8-6.8-4z"/></g>
+<path d="M20.6 3.4L10.2 13.8"/><path d="M20.6 3.4L14.2 20.6l-4-6.8-6.8-4z"/>
+{%- elif name == 'filter' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M3.8 5.4h16.4l-6.4 7.4v5.3l-3.6 1.7v-7z"/></g>
+<path d="M3.8 5.4h16.4l-6.4 7.4v5.3l-3.6 1.7v-7z"/>
+{%- elif name == 'info' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="8.7"/></g>
+<circle cx="12" cy="12" r="8.7"/><path d="M12 11v5.2M12 7.8v.3"/>
+{%- elif name == 'table' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="3.4" y="4.4" width="17.2" height="5" rx="1.6"/></g>
+<rect x="3.4" y="4.4" width="17.2" height="15.2" rx="2.6"/><path d="M3.4 9.4h17.2M3.4 14.6h17.2M9.6 9.4v10.2M15.2 9.4v10.2"/>
+{%- elif name == 'chart' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="15.2" y="4.6" width="3.4" height="13.4" rx="1.2"/></g>
+<path d="M4 20h16"/><rect x="5.4" y="12.4" width="3.4" height="5.6" rx="1.2"/><rect x="10.3" y="8.4" width="3.4" height="9.6" rx="1.2"/><rect x="15.2" y="4.6" width="3.4" height="13.4" rx="1.2"/>
+{%- elif name == 'server' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><rect x="3.4" y="4.2" width="17.2" height="6.4" rx="2.2"/></g>
+<rect x="3.4" y="4.2" width="17.2" height="6.4" rx="2.2"/><rect x="3.4" y="13.4" width="17.2" height="6.4" rx="2.2"/><path d="M7.2 7.4h.1M7.2 16.6h.1M12 7.4h4.6M12 16.6h4.6"/>
+{%- elif name == 'export' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M8 8.2l4-4.6 4 4.6z"/></g>
+<path d="M12 3.6v10.8"/><path d="M8 8.2l4-4.6 4 4.6"/><path d="M4.4 14.4v4.2a1.8 1.8 0 001.8 1.8h11.6a1.8 1.8 0 001.8-1.8v-4.2"/>
+{%- elif name == 'import' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M8 10L12 14.6l4-4.6z"/></g>
+<path d="M12 14.4V3.6"/><path d="M8 10L12 14.6l4-4.6"/><path d="M4.4 15v3.6a1.8 1.8 0 001.8 1.8h11.6a1.8 1.8 0 001.8-1.8V15"/>
+{%- elif name == 'restore' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M20.2 12a8.2 8.2 0 00-2.7-6.1V2.4"/></g>
+<path d="M20.2 12a8.2 8.2 0 10-2.7 6.1"/><path d="M20.2 19.8v-5.6h-5.6"/><path d="M12 8.4v4l2.6 1.8"/>
+{%- elif name == 'undo' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M4.2 8.6l3.4-3.4 3.4 3.4z"/></g>
+<path d="M4.2 12a8.2 8.2 0 108.2-8.2v3.4"/><path d="M4.2 8.6l3.4-3.4 3.4 3.4"/>
+{%- elif name == 'fingerprint' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 7.2a4.8 4.8 0 014.8 4.8v2.6"/><path d="M8.6 12v3.4a3.4 3.4 0 006.8 0v-2"/></g>
+<path d="M12 3.4a8.6 8.6 0 018.6 8.6"/><path d="M3.4 12a8.6 8.6 0 013.2-6.7"/><path d="M6.6 18.2A8.6 8.6 0 0112 20.6"/><path d="M12 7.2a4.8 4.8 0 014.8 4.8v2.6"/><path d="M12 10.4a1.6 1.6 0 011.6 1.6v3"/><path d="M8.6 12v3.4a3.4 3.4 0 006.8 0v-2"/>
+{%- elif name == 'scan' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M3.4 8.4V5.8a2.4 2.4 0 012.4-2.4h2.6"/><path d="M15.6 3.4h2.6a2.4 2.4 0 012.4 2.4v2.6"/><path d="M20.6 15.6v2.6a2.4 2.4 0 01-2.4 2.4h-2.6"/><path d="M8.4 20.6H5.8a2.4 2.4 0 01-2.4-2.4v-2.6"/></g>
+<path d="M3.4 8.4V5.8a2.4 2.4 0 012.4-2.4h2.6"/><path d="M15.6 3.4h2.6a2.4 2.4 0 012.4 2.4v2.6"/><path d="M20.6 15.6v2.6a2.4 2.4 0 01-2.4 2.4h-2.6"/><path d="M8.4 20.6H5.8a2.4 2.4 0 01-2.4-2.4v-2.6"/><path d="M3.4 12h17.2"/>
+{%- elif name == 'activity' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="18.6" cy="12.4" r="1.6"/></g>
+<path d="M3.4 12.4h3.6l2.2-6.2 3.6 11.6 2.2-5.4h5.6"/><circle cx="18.6" cy="12.4" r="1.6"/>
+{%- elif name == 'layers' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 3.4l8.6 4.6L12 12.6 3.4 8z"/></g>
+<path d="M12 3.4l8.6 4.6L12 12.6 3.4 8z"/><path d="M3.4 12.8L12 17.4l8.6-4.6"/><path d="M3.4 17L12 21.6 20.6 17"/>
+{%- elif name == 'target' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="4.8"/></g>
+<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.8"/><circle cx="12" cy="12" r="1.4"/>
+{%- elif name == 'zap' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M13.4 3.2L5.6 13.4h5.2l-1 7.4 7.8-10.2h-5.2z"/></g>
+<path d="M13.4 3.2L5.6 13.4h5.2l-1 7.4 7.8-10.2h-5.2z"/>
+{%- elif name == 'bell-off' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M8.2 6.4A5.8 5.8 0 0118 11.6v3.2l1.6 2.8H6.4z"/></g>
+<path d="M4 4l16 16"/><path d="M8.2 6.4A5.8 5.8 0 0118 11.6v3.2l1.6 2.8H6.4"/><path d="M9.6 19.4a2.6 2.6 0 004.8 0"/>
+{%- elif name == 'shield-check' -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><path d="M12 3.2l7.6 3.1v5.5c0 4.6-3.1 8.6-7.6 9.9-4.5-1.3-7.6-5.3-7.6-9.9V6.3z"/></g>
+<path d="M12 3.2l7.6 3.1v5.5c0 4.6-3.1 8.6-7.6 9.9-4.5-1.3-7.6-5.3-7.6-9.9V6.3z"/><path d="M8.8 12l2.4 2.4 4.2-4.4"/>
+{%- else -%}
+<g fill="currentColor" fill-opacity=".16" stroke="none"><circle cx="12" cy="12" r="8.7"/></g>
+<circle cx="12" cy="12" r="8.7"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}

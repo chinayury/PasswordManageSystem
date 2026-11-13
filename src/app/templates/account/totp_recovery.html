@@ -1,0 +1,39 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}恢复码 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题（本页无工具条，唯一出口在卡片底部）。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">RECOVERY CODES · 恢复码</span>
+        <h1 class="page-title">{{ icon('log') }}一次性恢复码</h1>
+        <p class="page-sub">共 10 个 · 每个仅能使用一次，请立即离线保存</p>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card narrow-card card--accent">
+    <div class="card-body">
+        <div class="notice notice-warning" role="alert">
+            {{ icon('alert') }}
+            <span><strong>请立即保存这 10 个恢复码！</strong>每个仅可使用一次，且<strong>只显示这一次</strong>。
+            手机丢失或无法获取动态码时，可在登录页的验证码输入框中改用恢复码登录。
+            每用掉一个，剩余数量就会减少。</span>
+        </div>
+
+        <div class="section-title">{{ icon('key') }}恢复码清单 / Recovery Codes</div>
+        <div class="code-block">
+            {% for c in codes %}<div>{{ c[:4] }}-{{ c[4:] }}</div>{% endfor %}
+        </div>
+
+        <p class="muted">建议：打印一份或存入密码管理器之外的离线介质，不要与主密码放在一起。</p>
+
+        <div class="form-actions">
+            <a href="{{ url_for('account.security') }}" class="btn btn-primary">{{ icon('shield') }}我已保存，返回安全设置</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

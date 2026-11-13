@@ -1,0 +1,74 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}安全中心 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">SECURITY CENTER · 安全中心</span>
+        <h1 class="page-title">{{ icon('fingerprint') }}安全中心</h1>
+        <p class="page-sub">管理两步验证（TOTP）与一次性恢复码，为账号登录加上第二道锁</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card narrow-card">
+    <div class="card-header">
+        <h2>{{ icon('fingerprint') }}两步验证（TOTP）</h2>
+        {% if state.enabled %}
+            <span class="badge badge-success">已开启</span>
+        {% else %}
+            <span class="badge badge-warning">未开启</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if state.enabled %}
+        <div class="notice notice-success" role="alert">
+            {{ icon('check-circle') }}
+            <span>已开启两步验证。登录时除密码外还需输入认证器的 6 位动态码。
+            剩余一次性恢复码：<strong>{{ state.recovery_left }}</strong> 个。</span>
+        </div>
+        <p class="muted">关闭前请准备好认证器。关闭需验证当前密码和当前有效动态码。</p>
+        <form method="post" action="{{ url_for('account.totp_disable') }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="current_password">当前密码<span class="req">*</span></label>
+                <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+            </div>
+            <div class="form-group">
+                <label for="code">当前 6 位动态验证码<span class="req">*</span><span class="hint-inline">认证器 App 实时生成</span></label>
+                <input type="text" id="code" name="code" required maxlength="6"
+                       inputmode="numeric" autocomplete="one-time-code" class="mono">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">{{ icon('bell-off') }}关闭两步验证</button>
+            </div>
+        </form>
+        {% else %}
+        <div class="notice notice-warning" role="alert">
+            {{ icon('alert') }}
+            <span>两步验证未开启。开启后登录需输入手机认证器（如 Google Authenticator、
+            微信小程序「腾讯身份验证器」等）的 6 位动态码，可有效防止密码泄露后被登录。</span>
+        </div>
+        {% if state.pending %}
+        <div class="notice notice-info">
+            {{ icon('info') }}
+            <span>此前已生成过密钥但未完成确认（密钥不再重复展示），可重新生成密钥开始设置。</span>
+        </div>
+        {% endif %}
+        <form method="post" action="{{ url_for('account.totp_setup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">{{ icon('shield') }}生成密钥并开始设置</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

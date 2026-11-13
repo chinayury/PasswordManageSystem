@@ -1,0 +1,59 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}开启两步验证 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">2FA SETUP · 两步验证设置</span>
+        <h1 class="page-title">{{ icon('key') }}开启两步验证</h1>
+        <p class="page-sub">把密钥录入认证器，再用动态码确认，密钥仅本次展示</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('account.security') }}" class="btn btn-secondary">{{ icon('back') }}返回安全中心</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card narrow-card">
+    <div class="card-body">
+        <div class="notice notice-warning" role="alert">
+            {{ icon('alert') }}
+            <span><strong>密钥仅本次显示</strong>，离开本页后不再展示，请立即添加到认证器。</span>
+        </div>
+
+        <div class="section-title">{{ icon('scan') }}第一步 · 录入密钥</div>
+        <div class="settings-box">
+            {# v0.1.0 第六轮 FU-04：label 的 for 必须指向可聚焦控件，
+                原先指向 <div> 属于无效关联；密钥文本改用 aria-live 区域 +
+                显式复制按钮的语义。#}
+            <div class="form-group">
+                <span class="form-label">在认证器中手动录入下方密钥<span class="hint-inline">或使用支持 otpauth 链接的认证器导入</span></span>
+                <div id="totp-secret" class="code-block" role="group"
+                     aria-label="TOTP 密钥">{{ secret }}</div>
+            </div>
+            <details>
+                <summary class="muted">查看 otpauth:// 链接</summary>
+                <label class="form-label" for="totp-uri">otpauth 链接（可直接粘贴到支持的认证器）</label>
+                <textarea class="code-block mono" id="totp-uri" readonly rows="3">{{ uri }}</textarea>
+            </details>
+        </div>
+
+        <div class="section-title">{{ icon('shield-check') }}第二步 · 确认动态码</div>
+        <form method="post" action="{{ url_for('account.totp_enable') }}" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="code">输入认证器显示的 6 位动态验证码<span class="req">*</span></label>
+                <input type="text" id="code" name="code" required maxlength="6" inputmode="numeric"
+                       placeholder="123456" autocomplete="one-time-code" class="mono">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">{{ icon('check-circle') }}确认开启</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}注册 - 密码管理系统 PDM{% endblock %}
+{% block body %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」认证页
+   居中单卡 + 钴蓝渐变头带。功能与旧版完全一致：
+   表单 id/name、data-purpose、data-strength-for、aria-live 均原样保留。
+   ========================================================================== #}
+<div class="auth-shell">
+    <div class="auth-container">
+        <div class="auth-band">
+            <span class="brand-mark">{{ icon('vault') }}</span>
+            <span class="auth-brand-name">密码管理系统 · PDM</span>
+            <span class="auth-band-sub">Create Your Account</span>
+            <ul class="auth-points">
+                <li>{{ icon('mail') }}邮箱验证</li>
+                <li>{{ icon('key') }}口令独立</li>
+                <li>{{ icon('shield-check') }}全程加密</li>
+            </ul>
+        </div>
+
+        <div class="auth-main">
+            {% include "partials/flash.html" %}
+            <span class="eyebrow">Register</span>
+            <h2>{{ icon('user') }}创建账号</h2>
+            <p class="auth-sub">填写信息并完成邮箱验证</p>
+
+            <form method="post" autocomplete="off" id="register-form" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">用户名<span class="req">*</span></label>
+                    <input type="text" id="username" name="username" required
+                           maxlength="50" pattern="[A-Za-z0-9_-]{3,50}"
+                           title="3-50位字母、数字、下划线或短横线" placeholder="设置用户名">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">邮箱地址<span class="req">*</span></label>
+                        <input type="email" id="email" name="email" required
+                               maxlength="100" placeholder="example@mail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="code">邮箱验证码<span class="req">*</span></label>
+                        <input type="text" id="code" name="code" required maxlength="6"
+                               pattern="\d{6}" title="6位数字" placeholder="6 位验证码">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="send-code-btn" class="btn btn-secondary btn-sm"
+                            data-purpose="register" data-label="获取验证码">{{ icon('mail') }}获取验证码</button>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码<span class="req">*</span><span class="hint-inline">至少 8 位，须含字母和数字</span></label>
+                    <input type="password" id="password" name="password" required
+                           minlength="8" maxlength="72" placeholder="设置登录密码"
+                           data-strength-for="1">
+                    <div class="strength-bar" aria-hidden="true"><div class="strength-bar-fill" id="strength-bar-fill"></div></div>
+                    <span id="password-strength" aria-live="polite"></span>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">确认密码<span class="req">*</span></label>
+                    <input type="password" id="confirm_password" name="confirm_password" required
+                           maxlength="72" placeholder="再次输入密码"
+                           aria-describedby="pw-mismatch">
+                    <span class="field-error" id="pw-mismatch" hidden>两次输入的密码不一致</span>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg">注 册</button>
+            </form>
+
+            <p class="auth-links">已有账号？<a href="{{ url_for('auth.login') }}">立即登录</a></p>
+        </div>
+
+        <div class="auth-foot">PasswordManageSystem v{{ APP_VERSION }} · 注册即获得独立加密空间</div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/send-code.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/password-strength.js') }}"></script>
+{# CSP script-src 'self'：禁止内联脚本，联动逻辑放在外部文件 #}
+<script src="{{ url_for('static', filename='js/pages/strength-bind.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pages/register.js') }}"></script>
+{% endblock %}

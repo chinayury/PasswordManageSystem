@@ -1,0 +1,65 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}登录 - 密码管理系统 PDM{% endblock %}
+{% block body %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」认证页
+   由上一版「左右分屏 + 墨色品牌区」改为**居中单卡 + 钴蓝渐变头带**：
+   品牌标识、卖点徽章、表单、页脚全部收进一张卡片，页面骨架完全不同。
+   功能与旧版完全一致：表单字段、name、csrf_token、POST 目标均未改动。
+   ========================================================================== #}
+<div class="auth-shell">
+    <div class="auth-container">
+        {# ---- 头带：品牌标识 + 三枚卖点徽章 ---- #}
+        <div class="auth-band">
+            <span class="brand-mark">{{ icon('vault') }}</span>
+            <span class="auth-brand-name">密码管理系统 · PDM</span>
+            <span class="auth-band-sub">Self-hosted Password Console</span>
+            <ul class="auth-points">
+                <li>{{ icon('shield-check') }}密文落库</li>
+                <li>{{ icon('share') }}受控共享</li>
+                <li>{{ icon('fingerprint') }}两步验证</li>
+            </ul>
+        </div>
+
+        {# ---- 表单区 ---- #}
+        <div class="auth-main">
+            {% include "partials/flash.html" %}
+            <span class="eyebrow">Sign in</span>
+            <h2>{{ icon('logout') }}账号登录</h2>
+            <p class="auth-sub">使用团队成员账号登录工作台</p>
+
+            <form method="post" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="username">用户名<span class="req">*</span></label>
+                    <input type="text" id="username" name="username" required
+                           maxlength="50" placeholder="请输入用户名" autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="password">密码<span class="req">*</span></label>
+                    <input type="password" id="password" name="password" required
+                           placeholder="请输入密码">
+                </div>
+                <div class="form-group remember-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember" value="1"> 7 天内保持登录
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg">登 录</button>
+            </form>
+
+            <p class="auth-links">
+                <a href="{{ url_for('auth.forgot_password') }}">忘记密码？</a>
+                {% if allow_register %}
+                    <span class="sep">|</span>
+                    <a href="{{ url_for('auth.register') }}">注册新账号</a>
+                {% endif %}
+            </p>
+        </div>
+
+        {# ---- 页脚 ---- #}
+        <div class="auth-foot">PasswordManageSystem v{{ APP_VERSION }} · 数据仅存于本机服务</div>
+    </div>
+</div>
+{% endblock %}

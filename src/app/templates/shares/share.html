@@ -1,0 +1,101 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}共享协作 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题；副标题点明当前操作对象（记录 #id · 型号）。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">SHARE CONTROL · 共享授权</span>
+        <h1 class="page-title">{{ icon('share') }}共享协作</h1>
+        <p class="page-sub">记录 #{{ record.id }} · {{ record.device_model }} 的共享设置</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+{# ---- 左：发起共享；右：已共享列表（含撤销，故用 danger-card 红竖条示警）---- #}
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ icon('send') }}共享给其他用户</h2>
+        </div>
+        <div class="card-body">
+            <p class="muted">填写对方用户名并选择有效期；勾选「允许编辑」后，对方可改写该记录的口令与备注。</p>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="shared_username">对方用户名</label>
+                    <input type="text" id="shared_username" name="shared_username" required
+                           maxlength="50" placeholder="输入要共享给的用户名">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expires_hours">有效期</label>
+                        <select id="expires_hours" name="expires_hours">
+                            <option value="0">永久有效</option>
+                            <option value="24">1 天</option>
+                            <option value="168">7 天</option>
+                            <option value="720">30 天</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="can_edit" value="1"> 允许编辑
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">{{ icon('send') }}确认共享</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card danger-card">
+        <div class="card-header">
+            <h2>{{ icon('users') }}已共享列表</h2>
+        </div>
+        <div class="card-body">
+            {% if shared_users %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>用户名</th><th>权限</th><th>有效期</th><th>共享时间</th><th>操作</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for user in shared_users %}
+                        <tr>
+                            <td class="nowrap">{{ user.username }}</td>
+                            <td>
+                                {% if user.can_edit %}<span class="badge badge-integration">可编辑</span>
+                                {% else %}<span class="badge badge-other">只读</span>{% endif %}
+                            </td>
+                            <td class="nowrap">{{ user.expires_at|localtime if user.expires_at else '永久' }}</td>
+                            <td class="nowrap">{{ user.created_at|localtime }}</td>
+                            <td class="cell-actions">
+                                <form method="post" action="{{ url_for('shares.revoke_share', record_id=record.id, share_id=user.id) }}" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                            data-confirm="确定取消共享给 {{ user.username }} 吗？">{{ icon('x-circle') }}取消共享</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                {{ icon('share') }}
+                <h3>尚未共享给任何用户</h3>
+                <p>在左侧填写对方用户名并确认共享，即可协作这条记录。</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

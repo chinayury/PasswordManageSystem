@@ -1,0 +1,44 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}两步验证 - 密码管理系统 PDM{% endblock %}
+{% block body %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」认证页
+   居中单卡 + 钴蓝渐变头带。功能与旧版完全一致。
+   ========================================================================== #}
+<div class="auth-shell">
+    <div class="auth-container">
+        <div class="auth-band">
+            <span class="brand-mark">{{ icon('vault') }}</span>
+            <span class="auth-brand-name">密码管理系统 · PDM</span>
+            <span class="auth-band-sub">Two-factor Authentication</span>
+            <ul class="auth-points">
+                <li>{{ icon('clock') }}30 秒刷新</li>
+                <li>{{ icon('key') }}支持恢复码</li>
+            </ul>
+        </div>
+
+        <div class="auth-main">
+            {% include "partials/flash.html" %}
+            <span class="eyebrow">Two-factor</span>
+            <h2>{{ icon('fingerprint') }}两步验证</h2>
+            <p class="auth-sub">输入认证器中的动态验证码完成登录</p>
+
+            <form method="post" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="code">6 位动态验证码</label>
+                    <input type="text" id="code" name="code" required
+                           maxlength="20" inputmode="numeric" placeholder="动态码或恢复码"
+                           autofocus autocomplete="one-time-code">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg">验 证</button>
+            </form>
+
+            <p class="auth-links">无法获取动态码？可输入开启两步验证时保存的一次性恢复码</p>
+        </div>
+
+        <div class="auth-foot">PasswordManageSystem v{{ APP_VERSION }} · 口令校验已通过</div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}数据恢复 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   整页为高危不可逆操作，卡片走 danger-card（左侧红竖条）。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">RESTORE · 数据恢复</span>
+        <h1 class="page-title">{{ icon('restore') }}数据恢复</h1>
+        <p class="page-sub">用备份文件覆盖当前数据库，属高危不可逆操作，执行前请再次核对文件</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin.system_settings') }}" class="btn btn-secondary">{{ icon('back') }}返回控制台</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card narrow-card danger-card">
+    <div class="card-body">
+        <div class="notice notice-danger" role="alert">
+            {{ icon('alert') }}
+            <span>
+                <strong>危险操作警告</strong><br>
+                恢复操作会用备份文件<strong>覆盖当前数据库的全部数据</strong>，此操作不可逆！
+                系统会自动把恢复前的现状另存为 pre_restore 快照，但请再次确认备份文件正确。
+            </span>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="backup_file">选择备份文件（.db）</label>
+                <input type="file" id="backup_file" name="backup_file" accept=".db" required>
+                <div class="file-hint">从上方备份列表下载的 .db 文件，或按同样方式生成的备份</div>
+            </div>
+            <div class="form-group">
+                <label for="confirm">输入 RESTORE 二次确认</label>
+                <input type="text" id="confirm" name="confirm" required pattern="RESTORE"
+                       title="必须输入大写 RESTORE" placeholder="RESTORE">
+            </div>
+            <button type="submit" class="btn btn-danger btn-block">确认恢复数据</button>
+        </form>
+
+        {% if backups %}
+        <h3 class="section-title">{{ icon('database') }}现有备份（供下载后核对）</h3>
+        <div class="info-list">
+            {% for b in backups %}
+            <div>
+                <dt>备份文件</dt>
+                <dd>
+                    <code>{{ b.name }}</code>（{{ '%.1f'|format(b.size_kb) }} KB，{{ b.created }}）
+                    <a href="{{ url_for('admin.download_backup', filename=b.name) }}">下载</a>
+                </dd>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

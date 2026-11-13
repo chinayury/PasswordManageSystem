@@ -1,0 +1,57 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}批量导入 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   导入说明由 notice 改为「条款清单」：每条一行、图标徽章前缀，阅读流线更清晰。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">BULK IMPORT · 批量导入</span>
+        <h1 class="page-title">{{ icon('upload') }}批量导入记录</h1>
+        <p class="page-sub">从 Excel 或 CSV 一次性载入存量设备账号，错误行自动跳过，不影响其余数据</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.download_example') }}" class="btn btn-secondary">{{ icon('download') }}下载标准模板</a>
+        <a href="{{ url_for('records.index') }}" class="btn btn-ghost">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <h3 class="section-title">{{ icon('info') }}导入说明</h3>
+        <ul class="info-list">
+            <div>
+                <dt>{{ icon('table') }}支持格式</dt>
+                <dd>Excel (.xlsx) 与 CSV（UTF-8）——单次最多 {{ import_max_rows }} 行，文件不超过 {{ import_max_mb }}MB</dd>
+            </div>
+            <div>
+                <dt>{{ icon('alert') }}必填列</dt>
+                <dd><code>device_model</code>（设备型号）</dd>
+            </div>
+            <div>
+                <dt>{{ icon('layers') }}关联项目</dt>
+                <dd><code>project_name</code> 列需与您创建的项目名称完全一致，否则该条不关联项目</dd>
+            </div>
+            <div>
+                <dt>{{ icon('lock') }}密码处理</dt>
+                <dd>导入的密码将自动加密存储；错误行会跳过并在结果中逐行提示，不影响其余数据</dd>
+            </div>
+        </ul>
+
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="file">选择文件<span class="req">*</span><span class="hint-inline">.xlsx / .csv</span></label>
+                <input type="file" id="file" name="file" accept=".xlsx,.csv" required>
+                <div class="file-hint">支持格式：.xlsx / .csv，UTF-8 编码</div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">{{ icon('upload') }}开始导入</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

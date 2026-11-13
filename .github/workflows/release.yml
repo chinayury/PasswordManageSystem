@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发布的 tag（须已存在，例如 v0.1.0）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  actions: write
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Verify wheel contents
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          whl = glob.glob("dist/*.whl")[0]
+          names = set(zipfile.ZipFile(whl).namelist())
+          required = [
+              "app/schema.sql",
+              "app/static/css/style.css",
+              "app/templates/base.html",
+          ]
+          missing = [n for n in required if n not in names]
+          assert not missing, f"wheel missing package data: {missing}"
+          print(f"{whl}: {len(names)} entries")
+          PY
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  docker:
+    name: Publish GHCR image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Compute lowercase image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ env.RELEASE_TAG }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.RELEASE_TAG }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${RELEASE_TAG}"
+          git rev-parse --verify "refs/tags/${tag}" >/dev/null
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            gh release create "$tag" dist/* \
+              --verify-tag \
+              --title "$tag" \
+              --generate-notes
+          fi
+
+  cleanup:
+    name: Cleanup old assets, images and artifacts
+    needs: [release, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old release assets (keep current tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          current="${RELEASE_TAG}"
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq '.[] | [.id, .tag_name] | @tsv' > releases.tsv
+          while IFS=$'\t' read -r rid rtag; do
+            [ -z "${rid:-}" ] && continue
+            [ "$rtag" = "$current" ] && continue
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/releases/${rid}/assets?per_page=100" \
+              --jq '.[].id' > assets.txt
+            while read -r aid; do
+              [ -z "${aid:-}" ] && continue
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
+                && echo "deleted asset ${aid} (release ${rtag})"
+            done < assets.txt
+          done < releases.tsv
+          exit 0
+
+      - name: Prune GHCR versions (keep latest + current)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          owner="${GITHUB_REPOSITORY_OWNER}"
+          pkg="$(echo "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+          current="${RELEASE_TAG}"
+          gh api --paginate "users/${owner}/packages/container/${pkg}/versions?per_page=100" \
+            --jq '.[] | [.id, (([.metadata.container.tags[]?] // []) | join(","))] | @tsv' > ghcr.tsv
+          if [ ! -s ghcr.tsv ]; then
+            echo "no GHCR versions available (package empty or not yet created)"
+            exit 0
+          fi
+          while IFS=$'\t' read -r vid vtags; do
+            [ -z "${vid:-}" ] && continue
+            keep=0
+            for t in ${vtags//,/ }; do
+              if [ "$t" = "latest" ] || [ "$t" = "$current" ]; then keep=1; fi
+            done
+            if [ "$keep" = "1" ]; then
+              echo "keep ${vid} (${vtags})"
+            else
+              gh api -X DELETE "users/${owner}/packages/container/${pkg}/versions/${vid}" \
+                && echo "deleted GHCR version ${vid} (${vtags})"
+            fi
+          done < ghcr.tsv
+          exit 0
+
+      - name: Delete artifacts from older runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | [.id, .workflow_run.id] | @tsv' > artifacts.tsv
+          while IFS=$'\t' read -r aid rid; do
+            [ -z "${aid:-}" ] && continue
+            if [ "$rid" != "${GITHUB_RUN_ID}" ]; then
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${aid}" \
+                && echo "deleted artifact ${aid} (run ${rid})"
+            fi
+          done < artifacts.tsv
+          exit 0

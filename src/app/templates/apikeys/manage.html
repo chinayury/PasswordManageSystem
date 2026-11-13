@@ -1,0 +1,138 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}API 接入 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题 + 工具条。
+   密钥明文仅出现一次，故「签发新密钥」区用 .card--accent（珊瑚竖条）强调。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">API ACCESS · API 接入</span>
+        <h1 class="page-title">{{ icon('plug') }}API 接入</h1>
+        <p class="page-sub">签发用于脚本集成的访问密钥，权限等同账户本人</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card card--accent">
+    <div class="card-body">
+        {% if created_key %}
+        {# ---- 一次性明文：仅本页展示，复制后即不再出现 ---- #}
+        <div class="notice notice-success">
+            {{ icon('check-circle') }}
+            <span>
+                <strong>密钥已生成（仅此一次展示，请立即复制保存）</strong><br>
+                <span class="toolbar">
+                    <code id="new-api-key" class="api-key-plain">{{ created_key }}</code>
+                    <button type="button" class="btn btn-sm btn-secondary" id="copy-new-key">{{ icon('copy') }}复制</button>
+                </span>
+            </span>
+        </div>
+        <p class="muted">离开或刷新本页后将无法再次查看，服务端只保存密钥摘要。</p>
+        {% endif %}
+
+        <div class="notice notice-warning">
+            {{ icon('alert') }}
+            <span>
+                <strong>安全提示</strong><br>
+                API 密钥可读写您名下的密码记录（等同您的账户权限），请妥善保管、定期轮换。
+                调用方式：<code>Authorization: Bearer pmk-xxxx</code>，接口详见文档 <code>/api/v1/records</code>。
+                <br>建议为每把密钥绑定<strong>来源 IP 白名单</strong>：密钥一旦泄露，影响面也被限制在白名单网段内。
+            </span>
+        </div>
+
+        <div class="section-title">{{ icon('key') }}签发新密钥</div>
+        <form method="post" action="{{ url_for('apikeys.create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="key_name">密钥名称</label>
+                    <input type="text" id="key_name" name="key_name" required maxlength="100" placeholder="例如：Python脚本专用">
+                    <span class="hint-inline">仅用于人工区分用途，不影响密钥权限</span>
+                </div>
+                {# v0.1.0 第六轮（借鉴 GB-30）：来源 IP / CIDR 白名单 #}
+                <div class="form-group">
+                    <label for="allowed_ips">来源 IP 白名单<span class="hint-inline">可留空 = 不限制</span></label>
+                    <input type="text" id="allowed_ips" name="allowed_ips" maxlength="500"
+                           placeholder="如 10.0.0.0/8, 192.168.1.23">
+                    <span class="hint-inline">逗号分隔的 IP 或 CIDR 网段；部署于反向代理之后时需先将
+                        <code>TRUST_PROXY</code> 置 true，否则全部请求都来自代理地址、白名单会一律拒绝。</span>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">{{ icon('key') }}签发</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="section-title">{{ icon('table') }}我的密钥列表</div>
+        {% if keys %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>名称</th><th>Key</th><th>状态</th><th>IP 白名单</th><th>最后使用</th><th>创建时间</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    {% for key in keys %}
+                    <tr>
+                        <td class="nowrap">{{ key.key_name }}</td>
+                        <td><code class="mono">{{ key.api_key[:20] }}…</code></td>
+                        <td>
+                            {% if key.is_active %}<span class="status-on">激活</span>
+                            {% else %}<span class="status-off">禁用</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if key.allowed_ips %}
+                                <code class="mono">{{ key.allowed_ips }}</code>
+                            {% else %}<span class="muted">不限制</span>{% endif %}
+                            <form method="post" action="{{ url_for('apikeys.update_ip_list', key_id=key.id) }}"
+                                  class="inline-form rename-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="allowed_ips" maxlength="500"
+                                       value="{{ key.allowed_ips }}"
+                                       placeholder="IP / CIDR，逗号分隔；留空清除"
+                                       aria-label="密钥 {{ key.key_name }} 的 IP 白名单">
+                                <button type="submit" class="btn btn-sm btn-ghost">{{ icon('shield') }}保存</button>
+                            </form>
+                        </td>
+                        <td class="nowrap">{{ key.last_used|localtime if key.last_used else '从未' }}</td>
+                        <td class="nowrap">{{ key.created_at|localtime }}</td>
+                        <td class="cell-actions">
+                            <form method="post" action="{{ url_for('apikeys.toggle', key_id=key.id) }}" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm {{ 'btn-secondary' if key.is_active else 'btn-success' }}">
+                                    {% if key.is_active %}{{ icon('lock') }}禁用{% else %}{{ icon('zap') }}启用{% endif %}
+                                </button>
+                            </form>
+                            <form method="post" action="{{ url_for('apikeys.delete', key_id=key.id) }}" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger" data-confirm="确定删除该密钥？使用它的脚本将立即失效。">{{ icon('trash') }}删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            {{ icon('key') }}
+            <h3>暂无 API 密钥</h3>
+            <p>填写名称并点击「签发」，即可获得一个可读写名下记录的访问密钥。</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/apikeys.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,25 @@
+# 密码管理系统 v0.1.0 依赖清单（版本锁定）
+# Web 框架与扩展
+Flask==3.1.3
+Flask-Login==0.6.3
+Flask-WTF==1.3.0
+WTForms==3.2.2
+Werkzeug==3.1.8
+
+# 安全
+bcrypt==5.0.0
+defusedxml==0.7.1  # openpyxl 解析上传 xlsx 时的 XML 实体扩张(billion laughs)防护，装后自动生效
+cryptography==44.0.1
+pyotp==2.9.0
+
+# Excel 导入导出（轻量直读写，替代旧版 pandas 重依赖）
+openpyxl==3.1.5
+
+# 配置
+python-dotenv==1.2.3
+
+# 生产 WSGI 服务器（Windows 友好）
+waitress==3.0.2
+
+# 测试（可选，生产可不装）
+pytest==9.1.1

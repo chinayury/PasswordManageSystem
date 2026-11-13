@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build
+
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Verify wheel contents
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          whl = glob.glob("dist/*.whl")[0]
+          names = set(zipfile.ZipFile(whl).namelist())
+          required = [
+              "app/schema.sql",
+              "app/static/css/style.css",
+              "app/templates/base.html",
+          ]
+          missing = [n for n in required if n not in names]
+          assert not missing, f"wheel missing package data: {missing}"
+          print(f"{whl}: {len(names)} entries, "
+                f"templates={sum('/templates/' in n for n in names)}")
+          PY
+
+      - name: Install built wheel
+        run: python -m pip install --no-deps --force-reinstall dist/*.whl
+
+      - name: CLI smoke
+        run: |
+          password-manager --version
+          python -m app --version
+
+      - name: HTTP smoke (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          export HOST=127.0.0.1 PORT=18081
+          python wsgi.py > server.log 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=0
+          for i in $(seq 1 40); do
+            if curl -fsS "http://127.0.0.1:${PORT}/healthz" -o healthz.json; then
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ok" != "1" ]; then
+            echo "--- server.log ---"
+            cat server.log
+            exit 1
+          fi
+
+          cat healthz.json
+          python - <<'PY'
+          import json
+
+          data = json.load(open("healthz.json", encoding="utf-8"))
+          assert data.get("success") is True, data
+          assert data.get("status") == "ok", data
+          assert data.get("version"), data
+          print("healthz ok, version =", data["version"])
+          PY
+
+          login=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${PORT}/login")
+          css=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${PORT}/static/css/style.css")
+          echo "login=${login} css=${css}"
+          test "$login" = "200"
+          test "$css" = "200"
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t pdm:ci .
+
+      - name: Container smoke
+        run: |
+          docker run -d --name pdm-ci -p 18082:6082 pdm:ci
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18082/healthz -o healthz.json; then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          docker logs pdm-ci || true
+          if [ "$ok" != "1" ]; then
+            echo "container did not become healthy"
+            exit 1
+          fi
+          cat healthz.json
+          curl -fsS -o /dev/null http://127.0.0.1:18082/login
+
+      - name: Cleanup container
+        if: always()
+        run: docker rm -f pdm-ci || true

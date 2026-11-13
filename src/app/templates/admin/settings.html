@@ -1,0 +1,179 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}系统控制台 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   原卡片内 card-header 上移至页头；全部配色与层级改由 class 承担，无内联样式。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">CONSOLE · 系统控制台</span>
+        <h1 class="page-title">{{ icon('server') }}系统控制台</h1>
+        <p class="page-sub">备份与恢复、注册开关、邮件服务与运行时状态的集中管控</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="settings-grid">
+            <div class="settings-box">
+                <h3>{{ icon('database') }}数据备份</h3>
+                <p class="muted">通过 SQLite 在线备份生成一致性快照，最多保留最近 10 份。</p>
+                <div class="toolbar">
+                    <form method="post" action="{{ url_for('admin.create_backup') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success">立即备份</button>
+                    </form>
+                    <a href="{{ url_for('admin.restore_data') }}" class="btn btn-warning">恢复数据</a>
+                </div>
+
+                {% if backups %}
+                <h3 class="section-title">{{ icon('database') }}备份文件</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>文件名</th><th>大小</th><th>时间</th><th>操作</th></tr></thead>
+                        <tbody>
+                            {% for b in backups %}
+                            <tr>
+                                <td class="mono">{{ b.name }}</td>
+                                <td class="num">{{ '%.1f'|format(b.size_kb) }} KB</td>
+                                <td class="nowrap">{{ b.created }}</td>
+                                <td><a href="{{ url_for('admin.download_backup', filename=b.name) }}" class="btn btn-sm btn-secondary">下载</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted">暂无备份。</p>
+                {% endif %}
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('shield') }}注册与安全</h3>
+                <p class="muted">控制是否开放自助注册；关闭后只能由管理员创建账号。</p>
+                <form method="post" action="{{ url_for('admin.toggle_allow_register') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if allow_register %}
+                        <input type="hidden" name="enable" value="0">
+                        <button type="submit" class="btn btn-warning">当前：开放注册（点击关闭）</button>
+                    {% else %}
+                        <input type="hidden" name="enable" value="1">
+                        <button type="submit" class="btn btn-primary">当前：已关闭注册（点击开启）</button>
+                    {% endif %}
+                </form>
+                <p class="muted">
+                    邮件服务（验证码）：{{ '已配置' if mail.configured else '未配置（注册/找回密码不可用）' }}
+                    {% if mail.source == 'env' %}· 来源 .env{% elif mail.source == 'db' %}· 来源 在线配置{% endif %}
+                </p>
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('mail') }}邮件服务（SMTP）</h3>
+                <p class="muted">用于注册 / 找回密码的验证码发送。此处保存的在线配置<strong>优先于</strong> .env，保存后<strong>立即生效，无需重启</strong>。
+                    建议使用邮箱服务商的「授权码」而非登录密码（QQ/163 等需在邮箱设置中开启 SMTP）。</p>
+
+                {% if mail.source == 'env' and mail.server %}
+                <p class="muted">当前生效配置来自 .env（{{ mail.server }}:{{ mail.port }}）。在此保存后将改用在线配置。</p>
+                {% endif %}
+
+                <form method="post" action="{{ url_for('admin.save_mail_settings') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group"><label for="server">SMTP 服务器</label>
+                            <input type="text" id="server" name="server" value="{{ mail.server }}" placeholder="如 smtp.qq.com" required>
+                        </div>
+                        <div class="form-group"><label for="port">端口</label>
+                            <input type="number" id="port" name="port" value="{{ mail.port }}" min="1" max="65535" placeholder="465">
+                        </div>
+                        <div class="form-group"><label for="username">SMTP 账号（发件邮箱）</label>
+                            <input type="text" id="username" name="username" value="{{ mail.username }}" placeholder="you@example.com" required>
+                        </div>
+                        <div class="form-group"><label for="password">SMTP 密码 / 授权码</label>
+                            <input type="password" id="password" name="password" placeholder="{{ '已设置（留空则不修改）' if mail.password_set else '必填' }}" autocomplete="new-password">
+                        </div>
+                        <div class="form-group"><label for="sender">发件人地址（可选，默认同账号）</label>
+                            <input type="text" id="sender" name="sender" value="{{ mail.sender }}" placeholder="留空使用 SMTP 账号">
+                        </div>
+                        <div class="form-group"><label for="use_tls">加密方式</label>
+                            <select id="use_tls" name="use_tls">
+                                <option value="1" {% if mail.use_tls %}selected{% endif %}>SSL/TLS（465 推荐）</option>
+                                <option value="0" {% if not mail.use_tls %}selected{% endif %}>STARTTLS / 明文（587/25）</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="muted">端口 465 自动使用 SSL 直连；其余端口按上方「加密方式」决定是否 STARTTLS。</p>
+                    <button type="submit" class="btn btn-primary">{{ icon('check-circle') }}保存邮件配置</button>
+                </form>
+
+                {% if mail.source == 'db' %}
+                {# CSP script-src 'self'：禁用内联 onclick，清除确认改由 data-confirm 挂接（独立表单，避免误触确认） #}
+                <form method="post" action="{{ url_for('admin.clear_mail_settings') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger"
+                            data-confirm="确定清除在线邮件配置并回退 .env？">清除在线配置</button>
+                </form>
+                {% endif %}
+
+                <h3 class="section-title">{{ icon('send') }}测试发送</h3>
+                <form method="post" action="{{ url_for('admin.test_mail_settings') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="test_email">测试收件邮箱<span class="hint-inline">用当前生效配置向指定邮箱发一封测试邮件</span></label>
+                        <input type="email" id="test_email" name="test_email" placeholder="收件邮箱 you@example.com" {% if mail.username %}value="{{ mail.username }}"{% endif %}>
+                    </div>
+                    <button type="submit" class="btn btn-secondary" {% if not mail.configured %}disabled title="请先保存邮件配置"{% endif %}>测试发送</button>
+                </form>
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('info') }}系统信息</h3>
+                <div class="info-list">
+                    <div>
+                        <dt>系统版本</dt>
+                        <dd>v{{ info.version }}</dd>
+                    </div>
+                    <div>
+                        <dt>数据库</dt>
+                        <dd>SQLite {{ info.sqlite }}（{{ '%.1f'|format(db_size_kb) }} KB）</dd>
+                    </div>
+                    <div>
+                        <dt>Python</dt>
+                        <dd>{{ info.python }}</dd>
+                    </div>
+                    <div>
+                        <dt>Flask</dt>
+                        <dd>{{ info.flask }}</dd>
+                    </div>
+                    <div>
+                        <dt>用户数</dt>
+                        <dd>{{ stats.users }}</dd>
+                    </div>
+                    <div>
+                        <dt>密码记录</dt>
+                        <dd>{{ stats.records }} 条（回收站 {{ stats.recycled }} 条）</dd>
+                    </div>
+                    <div>
+                        <dt>项目数</dt>
+                        <dd>{{ stats.projects }}</dd>
+                    </div>
+                    <div>
+                        <dt>审计日志</dt>
+                        <dd>{{ stats.logs }} 条</dd>
+                    </div>
+                    <div>
+                        <dt>数据库路径</dt>
+                        <dd><code>{{ info.db_path }}</code></dd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

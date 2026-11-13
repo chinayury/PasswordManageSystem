@@ -1,0 +1,48 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}编辑成员 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">MEMBER EDIT · 成员编辑</span>
+        <h1 class="page-title">{{ icon('edit') }}编辑成员资料</h1>
+        <p class="page-sub">修改成员的用户名与邮箱；如需重置口令，在下方填写新密码</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary">{{ icon('back') }}返回成员列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card narrow-card">
+    <div class="card-header">
+        <h2>{{ icon('user') }}成员资料</h2>
+    </div>
+    <div class="card-body">
+        <form method="post" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}"
+                       required maxlength="50" pattern="[A-Za-z0-9_-]{3,50}">
+            </div>
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input type="email" id="email" name="email" value="{{ user.email }}" required maxlength="100">
+            </div>
+            <div class="form-group">
+                <label for="password">重置密码<span class="hint-inline">留空则不修改；至少 8 位且含字母和数字</span></label>
+                <input type="password" id="password" name="password" maxlength="128"
+                       placeholder="如需重置密码请输入新密码" autocomplete="new-password">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">{{ icon('check-circle') }}保存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

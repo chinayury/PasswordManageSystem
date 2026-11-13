@@ -1,0 +1,21 @@
+{# v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」：
+   分页。上一页/下一页为图标 + 文字胶囊，当前页为钴蓝实心。 #}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="分页导航">
+    {% if page > 1 %}
+        <a class="page-btn" href="{{ modify_query(page=page-1) }}" rel="prev">{{ icon('chev-l') }}上一页</a>
+    {% endif %}
+    {% for p in range(1, pages + 1) %}
+        {% if p == page %}
+            <span class="page-btn current" aria-current="page">{{ p }}</span>
+        {% elif p <= 2 or p > pages - 2 or (p - page)|abs <= 2 %}
+            <a class="page-btn" href="{{ modify_query(page=p) }}">{{ p }}</a>
+        {% elif (p - page)|abs == 3 %}
+            <span class="page-btn dots">…</span>
+        {% endif %}
+    {% endfor %}
+    {% if page < pages %}
+        <a class="page-btn" href="{{ modify_query(page=page+1) }}" rel="next">下一页{{ icon('chev-r') }}</a>
+    {% endif %}
+</nav>
+{% endif %}

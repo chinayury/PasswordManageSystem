@@ -1,0 +1,29 @@
+# 密码管理系统 PDM 版 · Docker 部署编排（适配私有镜像仓库）
+# build: 本地构建镜像；推送私服后，去掉build，直接拉取镜像启动
+version: '3.3'
+services:
+    password-manager:
+        container_name: password-manager
+        # PIP_INDEX_URL: 国内网络走清华镜像保证构建可用; 海外改回 https://pypi.org/simple
+        build:
+            context: .
+            args:
+                PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        image: password-manager:v0.1.0
+        ports:
+            - '6084:6082'
+        environment:
+            - APP_ENV=production
+            - HOST=0.0.0.0
+            - PORT=6082
+            # v0.1.0: 部署于可信反向代理(nginx 等)之后时改为 true,
+            # 客户端 IP 才取 X-Forwarded-For(直连暴露时保持 false 防伪造)
+            - TRUST_PROXY=false
+            # SECRET_KEY / ENCRYPTION_KEY 首次启动自动生成,持久化在 /app/data/.secrets.env
+            # 需要固定(迁移/多实例)时再显式注入:
+            # - SECRET_KEY=替换为你的密钥
+            # - ENCRYPTION_KEY=替换为你的加密密钥
+        volumes:
+            # 交付版相对路径: 数据库/上传/备份/日志/密钥落在本 compose 同目录 data/ 下
+            - './data:/app/data'
+        restart: always

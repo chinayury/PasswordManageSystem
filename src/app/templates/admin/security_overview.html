@@ -1,0 +1,154 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}安全态势 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">SECURITY POSTURE · 安全态势</span>
+        <h1 class="page-title">{{ icon('gauge') }}安全态势</h1>
+        <p class="page-sub">攻击面、锁定现状与账户安全状况的一站式总览</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('admin.system_settings') }}" class="btn btn-secondary">{{ icon('back') }}返回系统控制台</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    {% if default_pw_active %}
+    <div class="notice notice-danger" role="alert">
+        {{ icon('alert') }}
+        <span>管理员 <strong>admin</strong> 仍在使用初始默认口令 admin123，存在被接管风险，
+        请立即在「成员管理」中重置或通知其本人修改！</span>
+    </div>
+    {% endif %}
+
+    <div class="card-body">
+        <div class="settings-grid">
+            <div class="settings-box">
+                <h3>{{ icon('activity') }}攻击面速览（近 7 天）</h3>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.login_failed_24h }}</span>
+                        <span class="stat-label">24h 登录失败</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.login_failed_7d }}</span>
+                        <span class="stat-label">7 天登录失败</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.totp_failed_7d }}</span>
+                        <span class="stat-label">7 天两步验证失败</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.reveal_7d }}</span>
+                        <span class="stat-label">7 天查看密码</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.export_7d }}</span>
+                        <span class="stat-label">7 天批量导出</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">{{ stats.api_keys_active }}</span>
+                        <span class="stat-label">活跃 API 密钥</span>
+                    </div>
+                </div>
+                <p class="muted">明细见「审计日志」页，可按动作 / 操作人 / 关键词筛选。</p>
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('lock') }}锁定现状</h3>
+                <div class="info-list">
+                    <div>
+                        <dt>单账户锁定中</dt>
+                        <dd>{{ stats.locked_accounts }} 个（连续失败 5 次锁 15 分钟，可在用户管理页手动解锁）</dd>
+                    </div>
+                    <div>
+                        <dt>用户名+IP 锁定中</dt>
+                        <dd>{{ stats.pair_locks }} 条（同来源连续失败 10 次锁 15 分钟，到时自动解除）</dd>
+                    </div>
+                </div>
+                {% if pair_locks %}
+                <h3 class="section-title">{{ icon('layers') }}用户名+IP 锁定明细</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>用户名</th><th>来源 IP</th><th>失败次数</th><th>解除时间(UTC)</th></tr></thead>
+                        <tbody>
+                            {% for p in pair_locks %}
+                            <tr>
+                                <td class="mono">{{ p.username }}</td>
+                                <td class="mono">{{ p.ip }}</td>
+                                <td class="num">{{ p.failed_count }}</td>
+                                <td class="mono nowrap">{{ p.locked_until }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+                {% if locked_users %}
+                <h3 class="section-title">{{ icon('user') }}单账户锁定明细</h3>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>用户</th><th>失败次数</th><th>解除时间(UTC)</th><th>操作</th></tr></thead>
+                        <tbody>
+                            {% for u in locked_users %}
+                            <tr>
+                                <td>{{ u.username }}</td>
+                                <td class="num">{{ u.failed_attempts }}</td>
+                                <td class="mono nowrap">{{ u.locked_until }}</td>
+                                <td><a href="{{ url_for('admin.manage_users') }}" class="btn btn-sm btn-secondary">去解锁</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('shield-check') }}账户安全状况</h3>
+                <div class="info-list">
+                    <div>
+                        <dt>有效用户</dt>
+                        <dd>{{ stats.users_total }} 人</dd>
+                    </div>
+                    <div>
+                        <dt>已开启两步验证</dt>
+                        <dd>{{ stats.users_totp }} 人（{{ '%.0f'|format(stats.users_total and stats.users_totp / stats.users_total * 100 or 0) }}%）</dd>
+                    </div>
+                    <div>
+                        <dt>待强制改密</dt>
+                        <dd>{{ stats.users_must_change }} 人（管理员重置口令后尚未更换为私人密码）</dd>
+                    </div>
+                </div>
+                <p class="muted">建议全员开启两步验证（安全设置页自助开启）；管理员可在用户管理页跟进强制改密完成情况。</p>
+            </div>
+
+            <div class="settings-box">
+                <h3>{{ icon('target') }}撞库热点（近 7 天失败登录目标）</h3>
+                {% if hot_targets %}
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>失败目标</th><th>次数</th></tr></thead>
+                        <tbody>
+                            {% for h in hot_targets %}
+                            {# v0.1.0 第六轮：撞库热点改为按目标用户名聚合，字段名 details -> target #}
+                            <tr><td class="mono">{{ h.target }}</td><td class="num">{{ h.c }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="muted">同一目标高频失败通常意味着撞库或口令喷洒攻击；确认非本人操作后可在用户管理页提前重置口令 / 禁用账户。</p>
+                {% else %}
+                <p class="muted">近 7 天无登录失败记录。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}共享中心 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题 + 工具条。
+   与资产台账同构：纯容器卡 + 表格，行内按需解密 / 复制（records.js 驱动）。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">INBOX · 共享给我</span>
+        <h1 class="page-title">{{ icon('inbox') }}共享中心</h1>
+        <p class="page-sub">其他成员共享给您的记录，按权限查看或编辑</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card card--plain">
+    {% if records %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>设备型号</th>
+                    <th>序列号</th>
+                    <th>IP地址</th>
+                    <th>用户名</th>
+                    <th>密码</th>
+                    <th>共享者</th>
+                    <th>权限</th>
+                    <th>到期时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr data-id="{{ record.id }}">
+                    <td class="nowrap"><strong>{{ record.device_model }}</strong></td>
+                    <td class="nowrap">{{ record.serial_number or '-' }}</td>
+                    <td class="mono nowrap">{{ record.ip_address or '-' }}</td>
+                    <td class="nowrap">{{ record.username or '-' }}</td>
+                    <td>
+                        {% if record.has_password %}
+                            <span class="pw-cell">
+                                <code class="pw-mask" data-record="{{ record.id }}">••••••••</code>
+                                <button class="btn btn-sm btn-info btn-reveal" data-record="{{ record.id }}" type="button" aria-label="查看密码">{{ icon('eye') }}查看</button>
+                                <button class="btn btn-sm btn-secondary btn-copy" data-record="{{ record.id }}" type="button" aria-label="复制密码">{{ icon('copy') }}复制</button>
+                            </span>
+                        {% else %}
+                            <span class="muted">未设置</span>
+                        {% endif %}
+                    </td>
+                    <td class="nowrap">{{ record.owner_name }}</td>
+                    <td>
+                        {% if record.can_edit %}
+                            <span class="badge badge-integration">可编辑</span>
+                        {% else %}
+                            <span class="badge badge-other">只读</span>
+                        {% endif %}
+                    </td>
+                    <td class="nowrap">{{ record.share_expires_at|localtime if record.share_expires_at else '永久' }}</td>
+                    <td class="cell-actions">
+                        {% if record.can_edit %}
+                            <a href="{{ url_for('records.edit', record_id=record.id) }}" class="btn btn-sm btn-primary">{{ icon('edit') }}编辑</a>
+                        {% else %}
+                            <span class="muted">只读</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        {{ icon('inbox') }}
+        <h3>还没有收到共享</h3>
+        <p>当其他成员把记录共享给您时，会集中显示在这里。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/records.js') }}"></script>
+{% endblock %}

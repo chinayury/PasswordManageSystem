@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "app"
+version = "0.1.0"
+description = "密码管理系统 PasswordManageSystem (PDM)：团队密码管理 Web 系统"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "PasswordManageSystem" }]
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+keywords = ["password", "vault", "flask", "security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: Flask",
+    "Topic :: Security",
+]
+dependencies = [
+    "Flask==3.1.3",
+    "Flask-Login==0.6.3",
+    "Flask-WTF==1.3.0",
+    "WTForms==3.2.2",
+    "Werkzeug==3.1.8",
+    "bcrypt==5.0.0",
+    "defusedxml==0.7.1",
+    "cryptography==44.0.1",
+    "pyotp==2.9.0",
+    "openpyxl==3.1.5",
+    "python-dotenv==1.2.3",
+    "waitress==3.0.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1"]
+
+[project.scripts]
+password-manager = "app.__main__:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+app = [
+    "schema.sql",
+    "templates/**/*.html",
+    "static/css/*",
+    "static/js/*",
+    "static/js/pages/*",
+    "static/img/*",
+]

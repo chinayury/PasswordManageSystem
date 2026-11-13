@@ -1,0 +1,120 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}成员管理 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">MEMBERS · 成员管理</span>
+        <h1 class="page-title">{{ icon('users') }}成员管理</h1>
+        <p class="page-sub">统一维护成员的角色归属、启用状态与凭证安全，当前共 {{ total }} 人</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+{# v0.1.0：管理员重置口令产生的一次性临时口令（服务端一次性仓传递，S-02）。
+   注意：<strong> 文案结尾与 <code class="temp-pw"> 的相对位置被测试依赖，不可调整。 #}
+{% if reset_pw %}
+<div class="notice notice-warning" role="alert" data-testid="temp-password">
+    {{ icon('key') }}
+    <span>
+        <strong>一次性临时口令：</strong>
+        <code class="temp-pw">{{ reset_pw }}</code>
+        <span class="muted">仅显示这一次，请立即通过安全渠道转交本人；该用户下次登录必须修改。</span>
+    </span>
+</div>
+{% endif %}
+{# 行内操作按「频率 / 破坏性」分级：编辑为主操作（实心主色），重置口令为次操作
+   （描边），解锁与角色变更为状态类，注销为唯一危险操作（红色）。 #}
+<div class="card card--plain">
+    {% if users %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>记录数</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td class="num">{{ user.id }}</td>
+                    <td class="nowrap"><strong>{{ user.username }}</strong>
+                        {% if user.id == current_user.id %}<span class="badge badge-office">我</span>{% endif %}
+                    </td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}<span class="badge badge-integration">管理员</span>
+                        {% else %}<span class="badge badge-other">普通用户</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}<span class="status-on">正常</span>
+                        {% else %}<span class="status-off">已禁用</span>{% endif %}
+                        {% if user.is_locked %}<br><span class="status-off">{{ icon('lock') }}已锁定</span>{% endif %}
+                        {% if user.must_change_password %}<br><span class="badge badge-warning">待改密</span>{% endif %}
+                    </td>
+                    <td class="num">{{ user.record_count }}</td>
+                    <td class="nowrap">{{ user.created_at|localtime }}</td>
+                    <td class="cell-actions">
+                        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">{{ icon('edit') }}编辑</a>
+                        {% if user.id != current_user.id %}
+                        <form method="post" action="{{ url_for('admin.reset_password', user_id=user.id) }}" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-secondary"
+                                    data-confirm="重置「{{ user.username }}」的口令？系统将生成一次性随机临时口令（仅显示一次），该用户下次登录必须改密。">{{ icon('refresh') }}重置口令</button>
+                        </form>
+                        {% if user.is_locked %}
+                        <form method="post" action="{{ url_for('admin.unlock_user', user_id=user.id) }}" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-success">{{ icon('undo') }}解锁</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm {{ 'btn-warning' if user.is_admin else 'btn-success' }}">
+                                {{ icon('shield') }}{{ '取消管理员' if user.is_admin else '设为管理员' }}
+                            </button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.toggle_active', user_id=user.id) }}" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-ghost">
+                                {{ '启用' if not user.is_active else '禁用' }}
+                            </button>
+                        </form>
+                        <form method="post" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="confirm" value="">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    data-confirm-input="注销用户「{{ user.username }}」将匿名化其账户并将其名下记录转入回收站。请输入 DELETE 确认："
+                                    data-confirm-token="DELETE">{{ icon('trash') }}注销</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        {{ icon('users') }}
+        <h3>还没有成员</h3>
+        <p>成员账号会显示在这里，可编辑资料、重置口令或调整角色。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

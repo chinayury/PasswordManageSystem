@@ -1,0 +1,116 @@
+{% from "partials/icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}密码管理系统 PDM{% endblock %}</title>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   新外壳结构：白色品牌栏 + 横向导航带（双层顶栏），
+   彻底移除上一版的「墨色 L 形（顶栏 + 左侧栏）」结构，内容区获全宽。
+   auth 类页面覆写 body 块走居中单卡布局。
+   ========================================================================== #}
+{% block body %}
+{# data-login-url：供 app.js 在 401 时跳转，避免前端硬编码登录路径 #}
+<div class="shell" data-login-url="{{ url_for('auth.login') }}">
+    {# ---- 第一层：白色品牌栏 ---- #}
+    <header class="appbar">
+        <a href="{{ url_for('records.index') }}" class="appbar-brand">
+            <span class="brand-mark">{{ icon('vault') }}</span>
+            <span class="appbar-brand-text">
+                <b>密码管理系统</b>
+                <small>PasswordManageSystem</small>
+            </span>
+        </a>
+        <span class="appbar-version">v{{ APP_VERSION }}</span>
+        <span class="appbar-spacer"></span>
+        <div class="appbar-meta">
+            {% if current_user.is_authenticated %}
+            <span class="appbar-chip">{{ icon('user') }}{{ current_user.username }}</span>
+            <span class="appbar-chip appbar-chip--role">
+                {{ icon('shield') }}{{ '系统管理员' if current_user.is_admin else '标准成员' }}
+            </span>
+            <a href="{{ url_for('auth.logout') }}" class="appbar-quick">{{ icon('logout') }}退出</a>
+            {% endif %}
+        </div>
+    </header>
+
+    {# ---- 第二层：横向导航带 ---- #}
+    {% block sidebar %}
+    {% if current_user.is_authenticated %}
+    {% set ep = request.endpoint or '' %}
+    <nav class="navstrip" aria-label="主导航">
+        <div class="navstrip-inner">
+            <span class="nav-group-label">工作台</span>
+            <a href="{{ url_for('records.index') }}" class="nav-item {{ 'active' if ep.startswith('records') and ep != 'records.recycle_bin' }}">{{ icon('table') }}密码资产</a>
+            <a href="{{ url_for('health.index') }}" class="nav-item {{ 'active' if ep.startswith('health') }}">{{ icon('activity') }}健康体检</a>
+            <a href="{{ url_for('projects.list_projects') }}" class="nav-item {{ 'active' if ep.startswith('projects') }}">{{ icon('layers') }}项目分组</a>
+            <a href="{{ url_for('shares.shared_with_me') }}" class="nav-item {{ 'active' if ep.startswith('shares') }}">{{ icon('share') }}共享中心</a>
+            <a href="{{ url_for('records.recycle_bin') }}" class="nav-item {{ 'active' if ep == 'records.recycle_bin' }}">{{ icon('trash') }}回收站</a>
+            <a href="{{ url_for('admin.operation_logs') }}" class="nav-item {{ 'active' if ep == 'admin.operation_logs' }}">{{ icon('log') }}审计日志</a>
+
+            <span class="nav-divider" aria-hidden="true"></span>
+            <span class="nav-group-label">账户</span>
+            <a href="{{ url_for('apikeys.manage') }}" class="nav-item {{ 'active' if ep.startswith('apikeys') }}">{{ icon('zap') }}API 接入</a>
+            <a href="{{ url_for('account.change_password') }}" class="nav-item {{ 'active' if ep == 'account.change_password' }}">{{ icon('lock') }}修改密码</a>
+            <a href="{{ url_for('account.security') }}" class="nav-item {{ 'active' if ep.startswith('account') and ep != 'account.change_password' }}">{{ icon('fingerprint') }}安全中心</a>
+
+            {% if current_user.is_admin %}
+            <span class="nav-divider" aria-hidden="true"></span>
+            <span class="nav-group-label">管理</span>
+            <a href="{{ url_for('admin.manage_users') }}" class="nav-item {{ 'active' if 'user' in ep and ep.startswith('admin') }}">{{ icon('users') }}成员管理</a>
+            <a href="{{ url_for('admin.security_overview') }}" class="nav-item {{ 'active' if ep == 'admin.security_overview' }}">{{ icon('gauge') }}安全态势</a>
+            <a href="{{ url_for('admin.system_settings') }}" class="nav-item {{ 'active' if ep.startswith('admin') and 'user' not in ep and ep != 'admin.security_overview' and ep != 'admin.operation_logs' }}">{{ icon('server') }}系统控制台</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+    {% endblock %}
+
+    {# ---- 内容区 ---- #}
+    <main class="main">
+        <div class="container">
+            {% block header %}{% endblock %}
+
+            {% if session.get('bootstrap_pw_warn') %}
+            <div class="flash-message danger" role="alert">
+                {{ icon('alert') }}
+                <span>安全警告：管理员仍在使用<strong>初始默认口令 admin123</strong>，请立即前往
+                <a href="{{ url_for('account.change_password') }}">修改密码</a> 页更换！</span>
+            </div>
+            {% endif %}
+
+            {% include "partials/flash.html" %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {# ---- 页脚：新增，收束整页阅读动线 ---- #}
+    <footer class="appfoot">
+        <div class="appfoot-inner">
+            <span><b>密码管理系统 PDM</b><span class="appfoot-sep">·</span>自托管团队口令资产台账<span class="appfoot-sep">·</span>v{{ APP_VERSION }}</span>
+            <span>Fernet 应用层加密<span class="appfoot-sep">·</span>全链路审计<span class="appfoot-sep">·</span>仅浅色主题</span>
+        </div>
+    </footer>
+</div>
+{% endblock %}
+
+{# 图片放大模态框：统一用 hidden 属性控制显隐 #}
+<div id="image-modal" class="image-modal" role="dialog" aria-modal="true" aria-label="图片预览" hidden>
+    <span class="close-modal" role="button" tabindex="0" aria-label="关闭预览">&times;</span>
+    <img class="modal-content" id="modal-img" alt="图片预览">
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{# v0.1.0 第六轮（借鉴 GE-02）：全局键盘快捷键，全站生效 #}
+<script src="{{ url_for('static', filename='js/pages/shortcuts.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,167 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}新增记录 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头 + 三段式表单（设备标识 / 连接与凭据 / 备注与附件）。
+   区块标题改用 .section-title（图标自动获得淡钴徽章 + 尾翼分隔线）。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">NEW ENTRY · 新增条目</span>
+        <h1 class="page-title">{{ icon('plus') }}新增密码记录</h1>
+        <p class="page-sub">录入一台设备账号：口令即时加密落库，可用生成器构造强口令并对照公开泄露库自检</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        <div class="card-body">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <h3 class="section-title">{{ icon('server') }}设备标识 / Device Identity</h3>
+
+            <div class="form-group">
+                <label for="project_id">所属项目</label>
+                <select id="project_id" name="project_id">
+                    <option value="">-- 不关联项目 --</option>
+                    {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.name }}（{{ project.type }}）</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="device_model">设备型号<span class="req">*</span></label>
+                    <input type="text" id="device_model" name="device_model" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="serial_number">序列号</label>
+                    <input type="text" id="serial_number" name="serial_number" maxlength="100">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="location">位置</label>
+                    <input type="text" id="location" name="location" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="node_name">节点名</label>
+                    <input type="text" id="node_name" name="node_name" maxlength="100">
+                </div>
+            </div>
+
+            <h3 class="section-title">{{ icon('plug') }}连接与凭据 / Connection</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ip_address">IP 地址</label>
+                    <input type="text" id="ip_address" name="ip_address" maxlength="50" class="mono" placeholder="如 192.168.1.10">
+                </div>
+                <div class="form-group">
+                    <label for="port">端口<span class="hint-inline">1-65535，如 22 / 3389</span></label>
+                    <input type="text" id="port" name="port" maxlength="20" class="mono" placeholder="如 22 / 3389">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码<span class="hint-inline">可手动输入，或用下方生成器</span></label>
+                    <div class="password-generator">
+                        <div class="pg-head">
+                            <span class="pg-title">{{ icon('refresh') }}口令生成器</span>
+                            {# v0.1.0 第六轮 FU-04：select 原先只有 title，
+                               读屏软件拿不到可访问名；补 aria-label #}
+                            <select id="pw-mode" title="生成模式" aria-label="生成模式">
+                                <option value="random">随机字符</option>
+                                <option value="passphrase">易记口令短语</option>
+                            </select>
+                        </div>
+                        <div id="pw-random-opts">
+                            <div class="form-group">
+                                <label for="pw-length">密码长度<span class="hint-inline">8-64 位</span></label>
+                                <input type="number" id="pw-length" value="16" min="8" max="64">
+                            </div>
+                            <div class="check-grid">
+                                <label class="checkbox-label"><input type="checkbox" id="pw-upper" checked>大写字母</label>
+                                <label class="checkbox-label"><input type="checkbox" id="pw-lower" checked>小写字母</label>
+                                <label class="checkbox-label"><input type="checkbox" id="pw-digits" checked>数字</label>
+                                <label class="checkbox-label"><input type="checkbox" id="pw-symbols" checked>符号</label>
+                                <label class="checkbox-label" title="剔除 i l I O o 0 1 等易混淆字符"><input type="checkbox" id="pw-no-similar">排除易混淆</label>
+                            </div>
+                        </div>
+                        <div id="pw-phrase-opts" hidden>
+                            <div class="form-group">
+                                <label for="pw-words">单词数量<span class="hint-inline">3-10 个</span></label>
+                                <input type="number" id="pw-words" value="5" min="3" max="10">
+                            </div>
+                            <div class="check-grid">
+                                <label class="checkbox-label"><input type="checkbox" id="pw-caps" checked>首字母大写</label>
+                                <label class="checkbox-label"><input type="checkbox" id="pw-digit" checked>附加数字</label>
+                            </div>
+                        </div>
+                        <div class="toolbar">
+                            <button type="button" id="generate-password-btn" class="btn btn-sm btn-secondary">{{ icon('refresh') }}生成密码</button>
+                            <button type="button" id="leak-check-btn" class="btn btn-sm btn-ghost" title="对照公开泄露库（k-匿名，仅发送摘要前 5 位）">{{ icon('alert') }}泄露检查</button>
+                        </div>
+                    </div>
+                    <input type="text" id="password" name="password" value="{{ default_password }}" maxlength="500" class="mono">
+                    <button type="button" id="toggle-password-visibility" class="btn btn-ghost btn-sm">{{ icon('eye') }}显示/隐藏</button>
+                    <div id="pw-hint" class="pw-hint" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="access_method">访问方式<span class="hint-inline">如 SSH、RDP、HTTP 等</span></label>
+                <input type="text" id="access_method" name="access_method" maxlength="50" placeholder="如：SSH、RDP、HTTP等">
+            </div>
+
+            <h3 class="section-title">{{ icon('paperclip') }}备注与附件 / Notes</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="remark1">备注1<span class="hint-inline">支持粘贴图片</span></label>
+                    <textarea id="remark1" name="remark1" rows="2" maxlength="5000"></textarea>
+                    <div id="remark1-preview" class="img-preview"></div>
+                </div>
+                <div class="form-group">
+                    <label for="remark2">备注2<span class="hint-inline">支持粘贴图片</span></label>
+                    <textarea id="remark2" name="remark2" rows="2" maxlength="5000"></textarea>
+                    <div id="remark2-preview" class="img-preview"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="file1">附件1<span class="hint-inline">png/jpg/pdf/txt/docx/xlsx 等</span></label>
+                    <input type="file" id="file1" name="file1">
+                    <div id="file1-preview" class="file-hint">未选择文件</div>
+                </div>
+                <div class="form-group">
+                    <label for="file2">附件2</label>
+                    <input type="file" id="file2" name="file2">
+                    <div id="file2-preview" class="file-hint">未选择文件</div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-lg">{{ icon('check-circle') }}保存记录</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages/record-form.js') }}"></script>
+{% endblock %}

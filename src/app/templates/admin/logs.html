@@ -1,0 +1,106 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}审计日志 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题（左竖轨由 .page-head-text 提供）+ 副标题 + 工具条。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">AUDIT TRAIL · 审计日志</span>
+        <h1 class="page-title">{{ icon('log') }}审计日志</h1>
+        <p class="page-sub">
+            {% if not current_user.is_admin %}仅显示本人操作记录{% else %}全部敏感操作的留痕台账，可按操作人 / 类型 / 关键词回溯{% endif %}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+{# 检索区：淡钴底条带，操作人 / 类型 / 关键词 / 日期区间同排，主操作实心、重置为幽灵按钮 #}
+<div class="card card--plain">
+    <form method="get" class="search-filter">
+        {% if current_user.is_admin %}
+        <div class="form-group">
+            <label for="user_id">操作人</label>
+            <select name="user_id" id="user_id">
+                <option value="">全部用户</option>
+                {% for u in log_users %}
+                    <option value="{{ u.id }}" {% if filters.user_id == u.id %}selected{% endif %}>{{ u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label for="op_type">操作类型</label>
+            <select name="op_type" id="op_type">
+                <option value="">全部类型</option>
+                {% for code, label in op_labels.items() %}
+                    <option value="{{ code }}" {% if filters.op_type == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group grow">
+            <label for="keyword">关键词</label>
+            <input type="text" id="keyword" name="keyword" maxlength="50" placeholder="详情 / 用户名关键词" value="{{ filters.keyword }}">
+        </div>
+        <div class="form-group">
+            <label for="date_from">开始日期</label>
+            <input type="date" id="date_from" name="date_from" value="{{ filters.date_from }}">
+        </div>
+        <div class="form-group">
+            <label for="date_to">结束日期</label>
+            <input type="date" id="date_to" name="date_to" value="{{ filters.date_to }}">
+        </div>
+        <div class="form-group">
+            {# v0.1.0 第六轮 FU-05：空 label 占位改为 aria-hidden，
+                不再向读屏软件暴露无意义标签 #}
+            <span class="form-spacer" aria-hidden="true"></span>
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary">{{ icon('filter') }}筛选</button>
+                <a href="{{ url_for('admin.operation_logs') }}" class="btn btn-ghost">重置</a>
+            </div>
+        </div>
+    </form>
+
+    {% if logs %}
+    <p class="result-count">{{ icon('info') }}共 <strong>{{ total }}</strong> 条留痕记录</p>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>操作</th>
+                    <th>操作人</th>
+                    <th>目标</th>
+                    <th>详情</th>
+                    <th>IP地址</th>
+                    <th>时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td><span class="op-tag op-{{ log.operation_type }}">{{ op_labels.get(log.operation_type, log.operation_type) }}</span></td>
+                    <td class="nowrap">{{ log.username or '系统' }}</td>
+                    <td class="nowrap">{{ log.target_type }}{% if log.target_id %} #{{ log.target_id }}{% endif %}</td>
+                    <td>{{ log.details or '-' }}</td>
+                    <td class="mono nowrap">{{ log.ip_address or '-' }}</td>
+                    <td class="nowrap">{{ log.created_at|localtime }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/pagination.html" %}
+    {% else %}
+    <div class="empty-state">
+        {{ icon('log') }}
+        <h3>没有符合条件的日志</h3>
+        <p>调整筛选条件或稍后再来查看。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

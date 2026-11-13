@@ -1,0 +1,115 @@
+{% from "partials/icons.html" import icon %}
+{% extends "base.html" %}
+{% block title %}健康体检 - 密码管理系统 PDM{% endblock %}
+{% block header %}
+{# ==========================================================================
+   v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」
+   页头：眉标胶囊 + 主标题 + 副标题 + 工具条。
+   本页主操作（发起审计）放在卡片内，页头工具条只保留返回入口，
+   避免右上角堆叠两个红色高危按钮。
+   ========================================================================== #}
+<div class="page-head">
+    <div class="page-head-text">
+        <span class="eyebrow">HEALTH CHECK · 健康体检</span>
+        <h1 class="page-title">{{ icon('activity') }}健康体检</h1>
+        <p class="page-sub">对全库口令做强度、复用、使用年龄与到期的集中扫描，输出态势评分与待处理清单</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('records.index') }}" class="btn btn-secondary">{{ icon('back') }}返回资产列表</a>
+    </div>
+</div>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        {# ---- 发起审计：说明 + 两个 POST 表单（scope=self / all）---- #}
+        <div class="settings-box">
+            <h3>{{ icon('scan') }}发起审计</h3>
+            <p class="muted">
+                在服务端批量解密并分析全部记录的口令强度 / 跨条目重复 / 使用年龄与到期情况。
+                分析在内存中完成，结果只保存评分与状态等派生量，密码值与哈希一律不落库、
+                不写日志；报告页与导出的 Excel 均不含密码列。
+            </p>
+            {% if current_user.is_admin %}
+            <p class="muted">HIBP 泄露查询（k-匿名，仅发送口令 SHA-1 前 5 位）当前：
+                {% if hibp_enabled %}<strong>已开启</strong>{% else %}<strong>关闭</strong>（配置 HIBP_ENABLED=true 可开启）{% endif %}
+            </p>
+            {% endif %}
+            <div class="toolbar">
+                <form method="post" action="{{ url_for('health.run') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="scope" value="self">
+                    <button type="submit" class="btn btn-primary"
+                            data-confirm="确要对本人记录发起一轮密码健康审计吗？">{{ icon('scan') }}审计本人记录</button>
+                </form>
+                {% if current_user.is_admin %}
+                <form method="post" action="{{ url_for('health.run') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="scope" value="all">
+                    <button type="submit" class="btn btn-danger"
+                            data-confirm="确要对全库（所有用户）记录发起一轮密码健康审计吗？分析结果仅管理员可见。">{{ icon('database') }}审计全库（管理员）</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- 历史轮次：一行一轮，态势评分直接给出结论 ---- #}
+        <div class="section-title">{{ icon('activity') }}历史体检轮次</div>
+        {% if runs %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>范围</th>
+                        <th>状态</th>
+                        <th>条目</th>
+                        <th>弱口令</th>
+                        <th>重复</th>
+                        <th>年龄/到期</th>
+                        {% if current_user.is_admin %}<th>泄露</th>{% endif %}
+                        <th>态势评分</th>
+                        <th>发起人</th>
+                        <th>时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in runs %}
+                    {% set r = item.row %}
+                    <tr>
+                        <td class="num">{{ r.id }}</td>
+                        <td>{% if r.scope_type == 'all' %}<span class="badge badge-ops">全库</span>{% else %}<span class="badge badge-other">本人</span>{% endif %}</td>
+                        <td>
+                            {% if r.status == 'done' %}<span class="badge badge-success">完成</span>
+                            {% elif r.status == 'partial' %}<span class="badge badge-warning">部分完成</span>
+                            {% elif r.status == 'failed' %}<span class="badge badge-danger">失败</span>
+                            {% else %}<span class="badge badge-info">进行中</span>{% endif %}
+                        </td>
+                        <td class="num">{{ r.item_total }}</td>
+                        <td class="num">{{ r.weak_count }}</td>
+                        <td class="num">{{ r.reused_count }}</td>
+                        <td class="num">{{ r.old_count }}</td>
+                        {% if current_user.is_admin %}<td class="num">{{ r.hibp_count }}{% if r.hibp_enabled and r.hibp_available == 0 %}（查询不可用）{% endif %}</td>{% endif %}
+                        <td><strong>{{ r.posture_score if r.posture_score is not none else '-' }}</strong>/100</td>
+                        <td class="nowrap">{{ r.creator or '-' }}</td>
+                        <td class="nowrap">{{ r.started_at|localtime }}</td>
+                        <td class="cell-actions">
+                            <a href="{{ url_for('health.report', run_id=r.id) }}" class="btn btn-sm btn-secondary">{{ icon('eye') }}查看报告</a>
+                            <a href="{{ url_for('health.export', run_id=r.id) }}" class="btn btn-sm btn-ghost">{{ icon('export') }}导出 Excel</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            {{ icon('activity') }}
+            <h3>还没有体检记录</h3>
+            <p>点击上方「发起审计」开始第一轮密码健康体检。</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

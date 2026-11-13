@@ -1,0 +1,19 @@
+{# v0.1.0 第二轮视觉重构「Cobalt Bay 钴湾」：
+   flash 提示条。类别映射到图标与配色；
+   左侧 4px 类别色边由 CSS 的 border-left-width 提供。 #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}
+            {% set cat = 'danger' if category in ('danger', 'error') else category %}
+            <div class="flash-message {{ cat }}">
+                {% if cat == 'success' %}{{ icon('check-circle') }}
+                {% elif cat == 'danger' %}{{ icon('x-circle') }}
+                {% elif cat == 'warning' %}{{ icon('alert') }}
+                {% else %}{{ icon('info') }}{% endif %}
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
