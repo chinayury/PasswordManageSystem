@@ -417,6 +417,7 @@ svg.ic { max-width: 28px; max-height: 28px; }
   color: var(--muted);
 }
 .appfoot-inner b { color: var(--text-strong); font-weight: 650; }
+.appfoot-inner a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .appfoot-sep { color: var(--border-strong); margin: 0 6px; }
 
 /* ==========================================================================
@@ -1522,6 +1523,7 @@ body:has(.auth-shell) {
   color: var(--muted-light);
   letter-spacing: .02em;
 }
+.auth-foot a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* 兼容上一版结构名的兜底（auth-side 已不再使用，保留定义防样式缺失） */
 .auth-side { display: none; }

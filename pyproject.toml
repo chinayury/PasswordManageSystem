@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "密码管理系统 PasswordManageSystem (PDM)：团队密码管理 Web 系统"
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "PasswordManageSystem" }]
+authors = [{ name = "智维ITMSKY" }]
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 keywords = ["password", "vault", "flask", "security"]
@@ -38,6 +38,10 @@ dev = ["pytest==9.1.1"]
 
 [project.scripts]
 password-manager = "app.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/chinayury/PasswordManageSystem"
+"Developer Website" = "http://www.itmsky.com"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

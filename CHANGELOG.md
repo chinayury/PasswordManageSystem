@@ -2,6 +2,21 @@
 
 本文件记录 PasswordManageSystem 的显著变更（新增在前）。
 
+## [2026-11-13] 许可与信息完善（AGPL-3.0-or-later）
+
+> 许可证保持 AGPL-3.0-or-later；本次补齐「许可与信息」元数据、SPDX 标识与
+> 网络服务（SaaS/Web/API）源码提供义务说明。版本号仍为 v0.1.0。
+
+### Changed（许可与信息）
+
+- `LICENSE`：文件头新增「许可与信息」块（开发者、版权、官网、许可证、SPDX 标识）
+  与四项声明；AGPL v3 官方正文保持不变。
+- `README.md`：新增「许可与信息」表与完整声明，「许可证」章节补充官方链接。
+- `pyproject.toml`：作者改为「智维ITMSKY」，新增 `[project.urls]`
+  （Homepage / Developer Website）。
+- 页面页脚（主界面及登录/注册/找回密码/两步验证页）新增
+  「Copyright © 2026 智维ITMSKY · itmsky.com」。
+
 ## [2026-11-13] v0.1.0 交付整理（标准 src 布局 · 文档对齐 · 冗余清理）
 
 > 版本号保持 v0.1.0 不变。本次为交付前的基线固化整理，无功能变更、无第三方依赖增减。
