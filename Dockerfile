@@ -41,6 +41,12 @@ RUN chmod +x /usr/local/bin/docker-entrypoint \
  && mkdir -p /app/data \
  && chown -R appuser:appuser /app
 
+# 健康探针（借鉴 Vaultwarden /alive + Passbolt healthcheck 的容器实践）：
+# /healthz 为无鉴权就绪探针（含 DB SELECT 1）。shell 形式确保 $PORT 展开
+# （exec 形式不展开环境变量）；slim 镜像无 curl/wget，用标准库 urllib。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/healthz' % os.getenv('PORT', '6082'), timeout=4)"
+
 ENTRYPOINT ["docker-entrypoint"]
 EXPOSE 6082
 CMD ["python", "wsgi.py"]

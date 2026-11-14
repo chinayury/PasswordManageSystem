@@ -11,6 +11,7 @@ import sys
 from dotenv import load_dotenv
 
 from .paths import BASE_DIR, LOG_FOLDER, ensure_runtime_dirs
+from .version import __version__
 
 # 兼容旧版 run.py 的首次生成 .env 行为：仅当文件完全不存在时生成一份
 _ENV_FILE = os.path.join(BASE_DIR, ".env")
@@ -117,7 +118,7 @@ def serve_threads_env(default: str = "8") -> int:
 class BaseConfig:
     """所有环境共享的配置。"""
 
-    VERSION = "0.1.0"
+    VERSION = __version__  # 版本单一来源（app/version.py），禁止在此硬编码
 
     # --- 会话与安全 ---
     SECRET_KEY = os.getenv("SECRET_KEY", "")

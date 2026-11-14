@@ -9,7 +9,8 @@ services:
             context: .
             args:
                 PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
-        image: password-manager:v0.1.0
+        # 本地构建 tag 不钉版本号（版本单一来源在 pyproject.toml + app/version.py）
+        image: password-manager:latest
         ports:
             - '6084:6082'
         environment:

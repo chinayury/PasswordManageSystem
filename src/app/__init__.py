@@ -11,14 +11,13 @@ import os
 import click
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
-__version__ = "0.1.0"
-
 # 品牌命名（全站统一引用，禁止散落硬编码）
 APP_NAME_CN = "密码管理系统"
 APP_NAME_EN = "PasswordManageSystem"
 APP_NAME_ABBR = "PDM"
 
 from . import paths
+from .version import __version__
 from .config import load_config
 from .extensions import init_extensions, login_manager
 from .models.user import load_user_by_id
