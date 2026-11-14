@@ -2,6 +2,36 @@
 
 本文件记录 PasswordManageSystem 的显著变更（新增在前）。
 
+## [2026-11-14] v0.1.1 · 健康探针挂接 + 版本单一来源收敛
+
+### Added（新增）
+
+- Dockerfile 内置 `HEALTHCHECK`（每 30s 请求容器内 `/healthz`；slim 镜像无
+  curl/wget，改用标准库 urllib。借鉴 GB-51 · Vaultwarden `/alive` 官方镜像
+  探针实践与 GB-52 · Passbolt healthcheck 容器实践，含"exec 形式不展开环境
+  变量须用 shell 形式"的坑位规避）。
+- `docs/02` 部署教程补「健康检查」说明（`docker compose ps` healthy 判定与
+  `curl /healthz` 手动验证）。
+- 新增 `tests/test_v011_healthz.py`（2 例）：/healthz 200/JSON/版本一致 +
+  pyproject / config / 包入口三方版本一致性守护。
+
+### Changed（改进）
+
+- **版本声明收敛为两处**（pyproject.toml + `app/version.py`）：新增
+  `app/version.py` 作为运行时单一来源；`config.py` 的 `VERSION` 改为导入
+  （原为第三处硬编码，存在发布漏改的漂移风险）。
+- `docker-compose.yml` 镜像 tag 由 `v0.1.0` 改为 `latest`（本地构建 tag
+  不再钉版本号，随重建自然跟随当前版本）。
+- `docs/01~05` 头部去掉钉死的版本号（改为更新日期）；`requirements.txt`
+  注释同步去版本。
+- `/healthz` 为既有实现（调研去重：Vaultwarden `/alive` 已有等价实现，
+  本轮仅补容器层挂接与文档）。
+
+### 兼容性说明
+
+- 不新增/删除依赖；不改任何请求处理行为；compose 镜像 tag 变更只影响本地
+  构建镜像名，`docker compose up -d --build` 重建即生效，数据卷不受影响。
+
 ## [2026-11-14] README 许可信息排版调整
 
 - 将 README 底部章节调整为 `## 许可与信息`，按最终文本直接列出开发者、版权、
