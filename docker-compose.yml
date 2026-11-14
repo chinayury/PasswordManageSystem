@@ -1,6 +1,5 @@
 # 密码管理系统 PDM 版 · Docker 部署编排（适配私有镜像仓库）
 # build: 本地构建镜像；推送私服后，去掉build，直接拉取镜像启动
-version: '3.3'
 services:
     password-manager:
         container_name: password-manager
