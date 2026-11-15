@@ -100,6 +100,7 @@ def _register_cli(app: Flask) -> None:
         import bcrypt
 
         from .db import get_db
+        from .services.auth import username_taken
 
         username = input("管理员用户名: ").strip()
         email = input("管理员邮箱: ").strip()
@@ -109,10 +110,11 @@ def _register_cli(app: Flask) -> None:
             raise SystemExit(1)
         with app.app_context():
             conn = get_db()
+            # CLI 为可信操作者入口，仅做大小写归一查重（不套保留名黑名单，
+            # 保证"admin 被删后重建管理员"等恢复场景可用）
             dup = conn.execute(
-                "SELECT id FROM users WHERE username=? OR email=?",
-                (username, email)).fetchone()
-            if dup:
+                "SELECT id FROM users WHERE email=?", (email,)).fetchone()
+            if dup or username_taken(conn, username):
                 print("用户名或邮箱已存在")
                 raise SystemExit(1)
             conn.execute(

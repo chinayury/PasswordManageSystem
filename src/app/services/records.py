@@ -40,8 +40,26 @@ def list_records(user_id: int, search: str = "", field: str = "device_model",
     else:
         where.append("p.deleted_at IS NOT NULL")
     if search:
-        where.append(f"p.{field} LIKE ?")
-        params.append(f"%{search.strip()}%")
+        # 借鉴 GB-54 · Padloc 多关键词检索：空格分隔的多个关键词逐词匹配
+        # （任一搜索字段命中即算该词命中），词与词之间取 AND；单关键词保持
+        # 原行为（仅所选字段）。% 与 _ 一律按字面量处理（ESCAPE '\'），
+        # 型号/序列号里常见的下划线不再被当作通配符。
+        terms = search.split()[:5]  # 最多取 5 个词，防止超长条件膨胀
+        def _like(value: str) -> str:
+            return "%" + value.replace("\\", "\\\\").replace("%", "\\%") \
+                              .replace("_", "\\_") + "%"
+        if len(terms) == 1:
+            where.append(f"p.{field} LIKE ? ESCAPE '\\'")
+            params.append(_like(terms[0]))
+        else:
+            term_groups = []
+            for t in terms:
+                term_groups.append(
+                    "(" + " OR ".join(
+                        f"p.{f} LIKE ? ESCAPE '\\'" for f in RECORD_SEARCH_FIELDS
+                    ) + ")")
+                params.extend([_like(t)] * len(RECORD_SEARCH_FIELDS))
+            where.append("(" + " AND ".join(term_groups) + ")")
     if project_id:
         where.append("p.project_id = ?")
         params.append(project_id)

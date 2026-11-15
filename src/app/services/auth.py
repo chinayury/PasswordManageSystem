@@ -16,6 +16,7 @@ from ..db import get_db
 from ..utils.timefmt import is_expired, parse_db_time, to_db_time, utcnow, utcnow_str
 from ..utils.validators import (
     BCRYPT_MAX_BYTES,
+    RESERVED_USERNAMES,
     ValidationError,
     check_account_password,
     password_byte_len,
@@ -431,6 +432,25 @@ def verify_code(email: str, code: str, purpose: str) -> bool:
     return False
 
 
+def username_taken(conn, username: str, exclude_id: int | None = None) -> bool:
+    """大小写不敏感的用户名占用检查（借鉴 GB-53 · TeamPass 3.2.4.3）。
+
+    旧实现精确匹配查重：admin 存在时仍可注册 Admin/ADMIN，形成与内置
+    管理员仅大小写之差的同名账户——审计日志与界面展示难以区分，属
+    账户混淆风险面。统一按 lower(username) 归一比较。
+    """
+    if exclude_id is None:
+        row = conn.execute(
+            "SELECT id FROM users WHERE lower(username)=lower(?)", (username,)
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT id FROM users WHERE lower(username)=lower(?) AND id != ?",
+            (username, exclude_id),
+        ).fetchone()
+    return row is not None
+
+
 def register_user(username: str, email: str, password: str, confirm: str, code: str):
     """注册新用户。返回 (user_row|None, error_message|None)。"""
     from .audit import log_operation
@@ -439,6 +459,8 @@ def register_user(username: str, email: str, password: str, confirm: str, code: 
     email = (email or "").strip().lower()
     if not valid_username(username):
         return None, "用户名需为 3-50 位字母、数字、下划线或短横线"
+    if username.lower() in RESERVED_USERNAMES:
+        return None, "该用户名为系统保留名，不可注册"
     if not valid_email(email):
         return None, "邮箱格式不正确"
     if password != confirm:
@@ -452,9 +474,9 @@ def register_user(username: str, email: str, password: str, confirm: str, code: 
 
     conn = get_db()
     dup = conn.execute(
-        "SELECT id FROM users WHERE username=? OR email=?", (username, email)
+        "SELECT id FROM users WHERE email=?", (email,)
     ).fetchone()
-    if dup:
+    if dup or username_taken(conn, username):
         return None, "用户名或邮箱已被注册"
     try:
         cur = conn.execute(
@@ -589,12 +611,13 @@ def admin_update_user(admin_id: int, target_id: int, username: str, email: str,
         except ValidationError as exc:
             return False, str(exc)
 
+    if username.lower() in RESERVED_USERNAMES:
+        return False, "该用户名为系统保留名，不可使用"
     conn = get_db()
     dup = conn.execute(
-        "SELECT id FROM users WHERE (username=? OR email=?) AND id != ?",
-        (username, email, target_id),
+        "SELECT id FROM users WHERE email=? AND id != ?", (email, target_id)
     ).fetchone()
-    if dup:
+    if dup or username_taken(conn, username, exclude_id=target_id):
         return False, "用户名或邮箱已被其他用户使用"
     cur = conn.execute("SELECT * FROM users WHERE id=?", (target_id,)).fetchone()
     if cur is None:

@@ -15,6 +15,13 @@ RECORD_SEARCH_FIELDS = (
 
 PROJECT_TYPES = ("集成项目", "运维项目", "日常办公", "其它")
 
+# 保留用户名（借鉴 GB-53 · TeamPass 3.2.4.3，小写比较）：
+# admin/administrator 指向内置管理员角色；system 是内置 id=0 账户；
+# api/root 是高危服务名。TeamPass 3.2.4.3 的同源教训：注册/身份流允许
+# 创建与内部账户同名的用户，造成账户混淆与接管风险面——在注册与
+# 改名入口直接堵死，而不是靠展示层区分大小写。
+RESERVED_USERNAMES = frozenset({"admin", "administrator", "system", "api", "root"})
+
 
 # bcrypt 算法上限：仅处理口令的前 72 字节，超长部分被静默截断。
 # 5.0 起对超过 72 字节的输入直接抛 ValueError，若不显式拦截会在
