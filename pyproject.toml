@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "app"
-version = "0.1.1"
+version = "0.2.0"
 description = "密码管理系统 PasswordManageSystem (PDM)：团队密码管理 Web 系统"
 readme = "README.md"
 requires-python = ">=3.11"
