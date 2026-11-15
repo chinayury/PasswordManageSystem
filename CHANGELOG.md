@@ -2,6 +2,34 @@
 
 本文件记录 PasswordManageSystem 的显著变更（新增在前）。
 
+## [2026-11-15] v0.2.1 · 会话重生成加固 + 回收站保留期（可选）
+
+### Security（安全加固）
+
+- **登录/登出会话重生成（借鉴 GB-55 · OWASP Session Management Cheat
+  Sheet，登录时会话 ID 重生成定级 mandatory；Flask 签名 Cookie 会话的
+  等价实现为 `session.clear()`，见 pallets/flask#1600 与 Flask-Session
+  官方文档）**：`_establish_session` 建立登录会话前先清空整个 session，
+  攻击者预置/残留的旧 Cookie 内容（半登录 pending_2fa、bootstrap 警示位
+  等）不再带入已认证会话；密码直登与 2FA 二次校验两条路径均经由该入口，
+  一处覆盖。登出时同样清空（OWASP 同源建议）。
+- 登录校验与会话纪元机制不变；既有用户会话不受影响。
+
+### Added（新增）
+
+- **回收站保留期（借鉴 GB-56 · Bitwarden/Vaultwarden 回收站 30 天自动
+  清理策略）**：新增 `RECYCLE_RETENTION_DAYS` 环境变量，N>0 时服务启动期
+  自动彻底删除在回收站停留超过 N 天的记录（含附件文件）；**默认 0=关闭**
+  （与历史行为逐字节一致），30 为对齐 Bitwarden 默认策略的推荐取值。
+  `.env.example` 同步文档。
+- 新增 `tests/test_v021_session_recycle.py`（4 例）：会话固定防护（旧
+  会话内容不带入）、保留期关闭/超期清理/未超期保留/存活记录不受影响。
+
+### 兼容性说明
+
+- 不新增/删除依赖；无数据库结构变更；`RECYCLE_RETENTION_DAYS` 未配置时
+  行为与 v0.2.0 完全一致；登录/登出仅多一次会话内容清空，正常用户无感。
+
 ## [2026-11-15] v0.2.0 · 用户名冲突防御 + 记录多关键词搜索
 
 ### Added（新增）
