@@ -43,6 +43,13 @@ def _establish_session(row, remember: bool):
     """
     from flask import session
 
+    # 会话固定防护（借鉴 GB-55 · OWASP Session Management Cheat Sheet）：
+    # 登录时必须重生成会话（OWASP 定级 mandatory）。Flask 默认为签名
+    # Cookie 会话、无服务端会话 ID（见 pallets/flask#1600），等价实现即
+    # 登录前清空整个 session——攻击者预置/残留的旧 Cookie 内容
+    # （半登录 pending_2fa、bootstrap 警示位等）不会带进已认证会话。
+    # 密码直登与 2FA 二次校验两条路径都经由本函数，一处覆盖全部入口。
+    session.clear()
     session.permanent = True
     session["_epoch"] = int(row["session_epoch"]) if "session_epoch" in row.keys() else 0
     login_user(User(row), remember=remember)
@@ -269,5 +276,10 @@ def forgot_password():
 def logout():
     log_operation(current_user.id, "logout", "user", current_user.id, "用户登出")
     logout_user()
+    # 登出同样重生成会话（OWASP Session Management Cheat Sheet）：
+    # 清空残留的会话内容，防止半登出状态被复用
+    from flask import session
+
+    session.clear()
     flash("已成功退出登录！", "success")
     return redirect(url_for("auth.login"))

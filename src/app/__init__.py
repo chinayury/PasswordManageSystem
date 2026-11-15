@@ -154,11 +154,12 @@ def _register_cli(app: Flask) -> None:
 
 def _register_startup_tasks(app: Flask) -> None:
     """启动时的轻量维护：过期共享清理 + 登录锁定表清理 + 预恢复快照清理
-    + 僵尸健康审计行收敛 + 数据库结构迁移。"""
+    + 僵尸健康审计行收敛 + 回收站保留期清理 + 数据库结构迁移。"""
     from .db import init_db
     from .services.auth import cleanup_expired_lockouts
     from .services.backup import prune_pre_restore_snapshots
     from .services.health import reap_stale_running_runs
+    from .services.records import purge_expired_recycled
     from .services.shares import cleanup_expired_shares
 
     init_db(app)
@@ -177,6 +178,11 @@ def _register_startup_tasks(app: Flask) -> None:
         stale_runs = reap_stale_running_runs()
         if stale_runs:
             app.logger.info("启动清理：%d 条僵尸健康审计轮次已标记为失败", stale_runs)
+        # 回收站保留期清理（RECYCLE_RETENTION_DAYS>0 才启用，默认关闭）
+        purged = purge_expired_recycled(
+            app.config.get("RECYCLE_RETENTION_DAYS") or 0)
+        if purged:
+            app.logger.info("启动清理：%d 条回收站超期记录已彻底删除", purged)
 
 
 def _warn_on_unsafe_binding(app: Flask) -> None:

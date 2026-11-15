@@ -431,6 +431,38 @@ def purge_record(record, operator_id: int) -> None:
                   f"彻底删除: {record['device_model']}")
 
 
+def purge_expired_recycled(retention_days: int) -> int:
+    """回收站保留期清理（借鉴 GB-56 · Bitwarden/Vaultwarden 回收站 30 天策略）。
+
+    retention_days<=0（默认）时不做任何清理——与历史行为完全一致；
+    配置 RECYCLE_RETENTION_DAYS=N>0 后由启动任务调用，自动彻底删除在
+    回收站停留超过 N 天的记录（含附件文件）。返回彻底删除的条数。
+    """
+    if not retention_days or retention_days <= 0:
+        return 0
+    from datetime import timedelta
+
+    from .audit import log_operation
+    from ..utils.timefmt import to_db_time, utcnow
+
+    cutoff = to_db_time(utcnow() - timedelta(days=retention_days))
+    conn = get_db()
+    stale = conn.execute(
+        "SELECT * FROM passwords WHERE deleted_at IS NOT NULL AND deleted_at <= ?",
+        (cutoff,)).fetchall()
+    for record in stale:
+        _remove_attachment_files(record)
+        conn.execute("DELETE FROM shared_records WHERE record_id=?", (record["id"],))
+        conn.execute("DELETE FROM custom_field_values WHERE record_id=?", (record["id"],))
+        conn.execute("DELETE FROM passwords WHERE id=?", (record["id"],))
+    if stale:
+        conn.commit()
+        log_operation(None, "purge", "system", None,
+                      f"回收站保留期清理（{retention_days} 天）："
+                      f"彻底删除 {len(stale)} 条超期记录")
+    return len(stale)
+
+
 def record_to_api_dict(record, include_password: str | None = None) -> dict:
     """记录 -> API/模板通用 dict；密码仅在明确要求时附带明文。"""
     item = {

@@ -164,6 +164,12 @@ class BaseConfig:
     IMPORT_MAX_ROWS = _int("IMPORT_MAX_ROWS", "5000", minimum=1)
     IMPORT_MAX_FILE_MB = _int("IMPORT_MAX_FILE_MB", "10", minimum=1)
     BACKUP_MAX_KEEP = _int("BACKUP_MAX_KEEP", "10", minimum=1)
+    # 回收站保留期（天）。0=关闭（默认，与历史行为一致：回收站内容仅手动
+    # 彻底删除）。配置 N>0 后，启动期自动彻底删除在回收站超过 N 天的记录
+    # （含附件）。借鉴 GB-56 · Bitwarden/Vaultwarden：其回收站固定 30 天
+    # 自动清理且不可关闭；本项目改为可配置并默认关闭，30 为对齐 Bitwarden
+    # 的推荐取值。
+    RECYCLE_RETENTION_DAYS = _int("RECYCLE_RETENTION_DAYS", "0", minimum=0, maximum=3650)
 
     # --- P4 密码健康审计 ---
     # HIBP k-匿名泄露查询（默认关闭：关闭时零外联，报告页隐藏泄露页签）。
