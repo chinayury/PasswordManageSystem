@@ -183,6 +183,33 @@ def _register_startup_tasks(app: Flask) -> None:
             app.config.get("RECYCLE_RETENTION_DAYS") or 0)
         if purged:
             app.logger.info("启动清理：%d 条回收站超期记录已彻底删除", purged)
+    # 进程内周期执行（GB-56 补强）：启动任务只跑一次，长期不重启的实例
+    # 此前不会再次清理；守护线程每日复用同一清理函数，保留期关闭时空转。
+    _start_recycle_retention_loop(app)
+
+
+def _start_recycle_retention_loop(app: Flask) -> None:
+    """回收站保留期的 24 小时守护线程。
+
+    RECYCLE_RETENTION_DAYS 为 0（默认关闭）时线程空转、零清理，行为与
+    关闭状态一致；周期任务异常只记日志，不拖垮服务。
+    """
+    import threading
+    import time as _time
+
+    def _loop() -> None:
+        while True:
+            _time.sleep(24 * 3600)
+            try:
+                with app.app_context():
+                    purged = purge_expired_recycled(
+                        app.config.get("RECYCLE_RETENTION_DAYS") or 0)
+                if purged:
+                    app.logger.info("周期清理：%d 条回收站超期记录已彻底删除", purged)
+            except Exception:  # noqa: BLE001
+                app.logger.exception("回收站保留期周期清理失败")
+
+    threading.Thread(target=_loop, name="recycle-retention", daemon=True).start()
 
 
 def _warn_on_unsafe_binding(app: Flask) -> None:
