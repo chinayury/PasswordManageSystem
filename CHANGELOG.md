@@ -2,6 +2,36 @@
 
 本文件记录 PasswordManageSystem 的显著变更（新增在前）。
 
+## [2026-11-18] v0.2.3 · 安全依赖升级 + 加密层基线测试
+
+### Changed（依赖升级 · 行为不变）
+
+- **cryptography 44.0.1 → 50.0.2**（口令加密核心，Fernet API 稳定，
+  升级后加解密往返与库内密文兼容——Fernet 令牌格式未变，存量密文
+  无需迁移）
+- pyotp 2.9.0 → 2.12.0（TOTP 校验行为一致）
+- Werkzeug 3.1.8 → 3.1.9、WTForms 3.2.2 → 3.3.2、python-dotenv 1.2.3 → 1.2.4
+- 升级范围经使用面核查：cryptography 仅用 `cryptography.fernet`
+  （Fernet/InvalidToken），pyotp 仅 TOTP 校验与 provisioning URI。
+
+### Fixed（修复）
+
+- `decrypt_or_none(None)` 此前抛 AttributeError（与 `_or_none` 语义
+  不符）；现空值统一返回 None。生产路径唯一调用方已自带守卫，
+  本修为防御性收敛，合法输入行为不变。
+
+### Tests（新增）
+
+- `tests/test_v023_crypto_baseline.py`（4 例）：Fernet 加解密往返与
+  IV 随机性、非法 token fail-closed、生成器输出形态（密码/短语/数字码/
+  API 密钥）、TOTP 校验与 provisioning URI——加密层此前无直接测试，
+  本轮补齐作为依赖升级基线。
+
+### 兼容性说明
+
+- 全量测试 16 passed；无数据库结构变更；存量密文直接可用；
+  CI 三平台矩阵 + Docker 构建为跨平台兼容背书。
+
 ## [2026-11-16] v0.2.2 · 回收站保留期周期化执行
 
 ### Changed（改进）
