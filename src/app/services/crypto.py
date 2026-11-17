@@ -30,6 +30,10 @@ class CryptoService:
             raise CryptoError("密文无法解密：加密密钥可能已变更") from exc
 
     def decrypt_or_none(self, token: str):
+        """解密失败返回 None（fail-soft）。空值（None/""）同样返回 None，
+        与方法名语义一致；调用方无需再自行判空。"""
+        if not token:
+            return None
         try:
             return self.decrypt(token)
         except CryptoError:
