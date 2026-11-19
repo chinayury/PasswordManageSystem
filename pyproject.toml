@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "app"
-version = "0.2.3"
+version = "0.2.4"
 description = "密码管理系统 PasswordManageSystem (PDM)：团队密码管理 Web 系统"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,7 +27,7 @@ dependencies = [
     "bcrypt==5.0.0",
     "defusedxml==0.7.1",
     "cryptography==50.0.2",
-    "pyotp==2.12.0",
+    "pyotp==2.12.1",
     "openpyxl==3.1.5",
     "python-dotenv==1.2.4",
     "waitress==3.0.2",
