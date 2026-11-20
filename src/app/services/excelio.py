@@ -158,7 +158,13 @@ def _zip_columns(values) -> dict:
     row = {}
     for idx, col in enumerate(IMPORT_COLUMNS):
         if idx < len(values):
-            row[col] = "" if values[idx] is None else str(values[idx]).strip()
+            # 借鉴 GB-58 · TeamPass 3.2.4.4：口令逐字保留——旧实现把口令
+            # 列也 strip()，首尾空格被静默剥除，导入后与原凭据不一致且
+            # 用户无从察觉。其余字段维持剥首尾空白（表格手填常态）。
+            if col == "password":
+                row[col] = "" if values[idx] is None else str(values[idx])
+            else:
+                row[col] = "" if values[idx] is None else str(values[idx]).strip()
         else:
             row[col] = ""
     return row

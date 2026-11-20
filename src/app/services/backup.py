@@ -104,6 +104,13 @@ def validate_backup_file(path: str) -> tuple[bool, str]:
             }
             if not {"users", "passwords"} <= tables:
                 return False, "备份文件缺少核心数据表，可能不是本系统的备份"
+            # 借鉴 GB-59 · TeamPass 3.2.4.4：拒绝其它实例的库。application_id
+            # 魔数（GB-38，0x50444D31="PDM1"）为本系统标识；0 为魔数引入前的
+            # 存量库，保持放行（兼容旧备份），非本系统的非零标识一律拒绝。
+            app_id = conn.execute("PRAGMA application_id").fetchone()[0]
+            if app_id not in (0, 0x50444D31):
+                return False, ("备份文件的应用标识不属于本系统"
+                               "（可能是其它 SQLite 应用或另一系统的库），已拒绝恢复")
             conn.execute("SELECT COUNT(*) FROM users")
         finally:
             conn.close()
