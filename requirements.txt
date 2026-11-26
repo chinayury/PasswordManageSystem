@@ -22,4 +22,4 @@ python-dotenv==1.2.4
 waitress==3.0.2
 
 # 测试（可选，生产可不装）
-pytest==9.1.1
+pytest==9.2.0
