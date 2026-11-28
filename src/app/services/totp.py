@@ -9,7 +9,7 @@
   替代逐条 bcrypt 比对——单次失败尝试从约 1 秒降到微秒级，
   彻底消除攻击者故意提交恢复码格式耗尽 CPU 的面；存量 bcrypt 哈希
   仍可验证（向后兼容），下次重新开启两步验证即切换为新格式；
-- 验证容差 valid_window=1（容忍前后各 1 个 30 秒周期的时钟偏差）；
+- 容忍前后各 1 个 30 秒周期的时钟偏差；同一密钥只接受比上次更新的时间步；
 - 未开启两步验证的用户完全不受影响（登录/接口流程不变）。
 """
 import hashlib
@@ -17,10 +17,12 @@ import hmac as _hmac
 import json
 import logging
 import re
+import time
 
 import bcrypt
 import pyotp
 from flask import current_app
+from pyotp.utils import strings_equal
 
 from ..db import get_db
 from .crypto import constant_time_equal, crypto
@@ -83,33 +85,44 @@ def set_pending_secret(user_id: int) -> tuple[bool, str, str]:
                 "用户 %s 已开启两步验证，拒绝重新生成密钥（防止无声关闭 2FA）", user_id)
             return False, "", ""
         secret = generate_secret()
-        get_db().execute(
-            "UPDATE users SET totp_secret=?, totp_enabled=0 WHERE id=?",
+        conn = get_db()
+        updated = conn.execute(
+            "UPDATE users SET totp_secret=?, totp_last_step=NULL"
+            " WHERE id=? AND totp_enabled=0",
             (crypto().encrypt(secret), user_id),
         )
-        get_db().commit()
+        conn.commit()
+        if not updated.rowcount:
+            return False, "", ""
         return True, secret, provisioning_uri(secret, row["username"])
     except Exception:  # noqa: BLE001
         logger.exception("生成 TOTP 密钥失败 user_id=%s", user_id)
         return False, "", ""
 
 
-def _verify_totp(secret: str, code: str) -> bool:
-    """校验 6 位动态码，容差 1 个周期。"""
+def _matching_totp_step(secret: str, code: str) -> int | None:
+    """返回匹配的时间步；窗口内发生数字碰撞时取最新步。"""
     if not re.fullmatch(r"\d{6}", code):
-        return False
+        return None
     try:
-        return bool(pyotp.TOTP(secret).verify(code, valid_window=1))
-    except Exception:  # noqa: BLE001
-        return False
+        otp = pyotp.TOTP(secret)
+        current = otp.timecode(time.time())
+        for step in (current + 1, current, current - 1):
+            if step >= 0 and strings_equal(otp.generate_otp(step), code):
+                return step
+    except (ValueError, TypeError, OverflowError):
+        return None
+    return None
 
 
 def _load_recovery_hashes(row) -> list[str]:
     try:
         hashes = json.loads(row["recovery_codes"] or "[]")
     except (ValueError, TypeError):
-        hashes = []
-    return [h for h in hashes if h]
+        return []
+    if not isinstance(hashes, list):
+        return []
+    return [h for h in hashes if isinstance(h, str) and h]
 
 
 def _recovery_digest(code: str) -> str:
@@ -150,7 +163,7 @@ def enable(user_id: int, code: str) -> tuple[bool, str, list[str]]:
     """开启流程第二步：用一次有效动态码确认开启，并生成一次性恢复码。
 
     返回 (是否成功, 提示, 恢复码明文列表)——明文仅随本次响应展示一次，
-    库中只保留 bcrypt 哈希。
+    库中只保留恢复码摘要。
     """
     from .audit import log_operation
 
@@ -160,18 +173,23 @@ def enable(user_id: int, code: str) -> tuple[bool, str, list[str]]:
     secret = _decrypt_secret(row["totp_secret"])
     if secret is None:
         return False, "请先点击「生成密钥」开始设置", []
-    if not _verify_totp(secret, _normalize(code)):
+    step = _matching_totp_step(secret, _normalize(code))
+    if step is None:
         return False, "验证码错误，请输入认证器当前的 6 位动态码", []
 
     codes = _generate_recovery_codes(RECOVERY_CODE_COUNT)
     # v0.1.0：恢复码摘要改用 HMAC-SHA256（秒级完成 10 个摘要的计算，
     # 旧 bcrypt 方案此处需约 1.5 秒且每次登录失败校验逐条重算）
     hashes = [_recovery_digest(c) for c in codes]
-    get_db().execute(
-        "UPDATE users SET totp_enabled=1, recovery_codes=? WHERE id=?",
-        (json.dumps(hashes), user_id),
+    conn = get_db()
+    updated = conn.execute(
+        "UPDATE users SET totp_enabled=1, recovery_codes=?, totp_last_step=?"
+        " WHERE id=? AND totp_enabled=0 AND totp_secret=?",
+        (json.dumps(hashes), step, user_id, row["totp_secret"]),
     )
-    get_db().commit()
+    conn.commit()
+    if not updated.rowcount:
+        return False, "两步验证设置已变更，请刷新页面后重试", []
     log_operation(user_id, "totp_enabled", "user", user_id,
                   "用户开启两步验证（TOTP），已生成一次性恢复码")
     return True, "两步验证已开启", codes
@@ -190,7 +208,7 @@ def disable(user_id: int, current_password: str, code: str) -> tuple[bool, str]:
 
     conn = get_db()
     row = conn.execute(
-        "SELECT username, password, totp_secret FROM users WHERE id=?", (user_id,)
+        "SELECT password, totp_secret FROM users WHERE id=?", (user_id,)
     ).fetchone()
     if row is None:
         return False, "用户不存在"
@@ -202,13 +220,18 @@ def disable(user_id: int, current_password: str, code: str) -> tuple[bool, str]:
     if not pw_ok:
         return False, "当前密码错误"
     secret = _decrypt_secret(row["totp_secret"])
-    if secret is None or not _verify_totp(secret, _normalize(code)):
+    step = _matching_totp_step(secret, _normalize(code)) if secret else None
+    if step is None:
         return False, "验证码错误，请输入认证器当前的 6 位动态码"
 
-    conn.execute(
-        "UPDATE users SET totp_secret=NULL, totp_enabled=0, recovery_codes=NULL"
-        " WHERE id=?", (user_id,))
+    updated = conn.execute(
+        "UPDATE users SET totp_secret=NULL, totp_enabled=0, recovery_codes=NULL,"
+        " totp_last_step=NULL WHERE id=? AND totp_enabled=1 AND totp_secret=?"
+        " AND password=? AND (totp_last_step IS NULL OR totp_last_step < ?)",
+        (user_id, row["totp_secret"], row["password"], step))
     conn.commit()
+    if not updated.rowcount:
+        return False, "验证未通过，请等待认证器显示新的动态码后重试"
     log_operation(user_id, "totp_disabled", "user", user_id, "用户关闭两步验证")
     return True, "两步验证已关闭"
 
@@ -226,8 +249,17 @@ def verify_login_code(row, code: str) -> tuple[bool, bool]:
         logger.error("用户 %s(TOTP) 密钥缺失或解密失败，已拒绝登录", row["id"])
         return False, False
 
-    if _verify_totp(secret, code):
-        return True, False
+    conn = get_db()
+    step = _matching_totp_step(secret, code)
+    if step is not None:
+        updated = conn.execute(
+            "UPDATE users SET totp_last_step=?"
+            " WHERE id=? AND is_active=1 AND totp_enabled=1 AND totp_secret=?"
+            " AND (totp_last_step IS NULL OR totp_last_step < ?)",
+            (step, row["id"], row["totp_secret"], step),
+        )
+        conn.commit()
+        return bool(updated.rowcount), False
 
     # 动态码未命中，尝试恢复码（格式 8 位十六进制；6 位纯数字必然不匹配，直接跳过）
     hashes = _load_recovery_hashes(row)
@@ -237,11 +269,14 @@ def verify_login_code(row, code: str) -> tuple[bool, bool]:
             from .audit import log_operation
 
             hashes.pop(idx)
-            get_db().execute(
-                "UPDATE users SET recovery_codes=? WHERE id=?",
-                (json.dumps(hashes), row["id"]),
+            updated = conn.execute(
+                "UPDATE users SET recovery_codes=? WHERE id=? AND is_active=1"
+                " AND totp_enabled=1 AND totp_secret=? AND recovery_codes=?",
+                (json.dumps(hashes), row["id"], row["totp_secret"], row["recovery_codes"]),
             )
-            get_db().commit()
+            conn.commit()
+            if not updated.rowcount:
+                return False, False
             log_operation(row["id"], "recovery_used", "user", row["id"],
                           f"使用一次性恢复码登录（剩余 {len(hashes)} 个）")
             return True, True

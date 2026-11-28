@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- v2.3 TOTP 两步验证：secret 用应用层 Fernet 加密存储；恢复码存 bcrypt 哈希 JSON
     totp_secret TEXT,                     -- TOTP 密钥（Fernet 密文，NULL=未设置）
     totp_enabled INTEGER NOT NULL DEFAULT 0, -- 两步验证开关（1=登录需二次验证）
+    totp_last_step INTEGER,               -- 当前密钥已使用的最大 TOTP 时间步
     recovery_codes TEXT,                  -- 恢复码 bcrypt 哈希 JSON 数组（用过即删）
     -- v0.1.0 会话纪元：改密/重置/注销时 +1，用于把该用户既有登录态
     -- （含"记住我"）全部踢下线，替代原先"改密不清场"的缺陷（S-11）

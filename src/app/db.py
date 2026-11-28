@@ -30,6 +30,7 @@ _COLUMN_MIGRATIONS = {
         # v2.3 TOTP 两步验证（secret 为 Fernet 密文；恢复码为 bcrypt 哈希 JSON）
         "totp_secret": "TEXT",
         "totp_enabled": "INTEGER NOT NULL DEFAULT 0",
+        "totp_last_step": "INTEGER",
         "recovery_codes": "TEXT",
         # v0.1.0 会话纪元（改密/重置踢下线，见 services.auth.revoke_user_sessions）
         "session_epoch": "INTEGER NOT NULL DEFAULT 0",
@@ -174,8 +175,8 @@ def init_db(app) -> None:
                 "请尽快登录并设置私有口令）")
 
 
-def run_migrations(conn: sqlite3.Connection) -> None:
-    """对存量库执行幂等增量迁移（补列/补表/记录版本）。"""
+def add_missing_columns(conn: sqlite3.Connection) -> bool:
+    """启动或还原旧库时补齐存量表的缺列，保留已有数据。"""
     changed = False
     for table, columns in _COLUMN_MIGRATIONS.items():
         if not _table_exists(conn, table):
@@ -186,6 +187,12 @@ def run_migrations(conn: sqlite3.Connection) -> None:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
                 logger.info("迁移：为表 %s 补充列 %s", table, col)
                 changed = True
+    return changed
+
+
+def run_migrations(conn: sqlite3.Connection) -> None:
+    """对存量库执行幂等增量迁移（补列/补表/记录版本）。"""
+    changed = add_missing_columns(conn)
 
     # 旧版 api_keys 表可能已存在且含明文密钥：迁移为摘要存储
     if _table_exists(conn, "api_keys"):

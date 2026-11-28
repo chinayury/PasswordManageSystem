@@ -5,10 +5,12 @@ import re
 import shutil
 import sqlite3
 import threading
+from contextlib import closing
 from datetime import datetime, timezone
 
 from flask import current_app
 
+from ..db import add_missing_columns
 from .audit import log_operation
 
 logger = logging.getLogger(__name__)
@@ -236,6 +238,15 @@ def restore_backup(uploaded_path: str, user_id: int) -> tuple[bool, str]:
         ok, msg = validate_backup_file(uploaded_path)
         if not ok:
             return False, msg
+        # 先迁移上传的临时副本，再换库，使旧备份无需重启即可用于验证。
+        try:
+            with closing(sqlite3.connect(uploaded_path)) as staged:
+                staged.row_factory = sqlite3.Row
+                add_missing_columns(staged)
+                staged.commit()
+        except sqlite3.Error:
+            logger.exception("升级备份数据库结构失败")
+            return False, "恢复失败：无法升级备份数据库结构"
         db_path = current_app.config["DATABASE"]
         os.makedirs(_backup_folder(), exist_ok=True)
         pre = os.path.join(

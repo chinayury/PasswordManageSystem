@@ -53,13 +53,23 @@ def test_generators_basic():
     assert constant_time_equal("a", "b") is False
 
 
-def test_totp_verify_and_uri():
+def test_totp_verify_and_uri(monkeypatch):
+    from base64 import b32encode
+    from types import SimpleNamespace
+
     import pyotp
 
-    secret = totp_mod.generate_secret()
-    assert len(secret) >= 16
-    code = pyotp.TOTP(secret).now()
-    assert totp_mod._verify_totp(secret, code) is True
-    assert totp_mod._verify_totp(secret, "123456789") is False  # 长度非法
+    assert len(totp_mod.generate_secret()) >= 16
+    secret = b32encode(bytes(range(20))).decode("ascii")
+    otp = pyotp.TOTP(secret)
+    timestamp = 1_700_000_000
+    monkeypatch.setattr(totp_mod, "time", SimpleNamespace(time=lambda: timestamp))
+    for offset in (-2, -1, 0, 1, 2):
+        sample = timestamp + offset * otp.interval
+        step = totp_mod._matching_totp_step(secret, otp.at(sample))
+        assert step == (sample // otp.interval if abs(offset) <= 1 else None)
+    full_width = "".join(chr(ord(digit) + 0xFEE0) for digit in otp.at(timestamp))
+    assert totp_mod._matching_totp_step(secret, full_width) == timestamp // otp.interval
+    assert totp_mod._matching_totp_step(secret, "") is None
     uri = totp_mod.provisioning_uri(secret, "alice")
     assert uri.startswith("otpauth://totp/") and secret in uri

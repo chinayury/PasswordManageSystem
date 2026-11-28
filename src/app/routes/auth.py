@@ -172,7 +172,7 @@ def totp_login():
             session.pop("pending_2fa", None)
             flash("验证失败次数过多，请 15 分钟后重新登录。", "danger")
             return redirect(url_for("auth.login"))
-        flash("验证码错误，请输入认证器当前的 6 位动态码，或改用一次性恢复码", "danger")
+        flash("验证码无法使用，请等待认证器显示下一组动态码，或使用一次性恢复码", "danger")
 
     return render_template("auth/totp.html")
 
